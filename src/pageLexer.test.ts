@@ -95,5 +95,114 @@ This is the rest of the content with another {{< shortcode2 />}}.`;
       expect(secondShortcode.name).toBe('shortcode2');
       expect(secondShortcode.isInline).toBe(true);
     });
+
+    test('应该正确解析简单的嵌套 shortcode', () => {
+      const content = 'This is {{< bold >}}bold with {{< link url="https://example.com" >}}a link{{< /link >}}{{< /bold >}}.';
+      
+      const result = PageLexer.parse(content);
+      
+      // 验证解析结果
+      const shortcodeItems = result.items.filter(item => item.type === 'shortcode');
+      expect(shortcodeItems.length).toBe(4); // 2个开始标签和2个结束标签
+      
+      // 验证 bold shortcode
+      const boldOpen = shortcodeItems[0] as ShortcodeItem;
+      expect(boldOpen.name).toBe('bold');
+      expect(boldOpen.isClosing).toBe(false);
+      
+      // 验证 link shortcode
+      const linkOpen = shortcodeItems[1] as ShortcodeItem;
+      expect(linkOpen.name).toBe('link');
+      expect(linkOpen.params).toContain('url="https://example.com"');
+      expect(linkOpen.isClosing).toBe(false);
+      
+      // 验证闭合标签的顺序
+      const linkClose = shortcodeItems[2] as ShortcodeItem;
+      expect(linkClose.name).toBe('link');
+      expect(linkClose.isClosing).toBe(true);
+      
+      const boldClose = shortcodeItems[3] as ShortcodeItem;
+      expect(boldClose.name).toBe('bold');
+      expect(boldClose.isClosing).toBe(true);
+    });
+
+    test('应该正确解析复杂的嵌套 tabs shortcode', () => {
+      const content = `{{< tabs >}}
+
+{{< tab "MacOS" >}}
+# MacOS
+
+This is tab **MacOS** content.
+
+Lorem markdownum insigne. Olympo signis Delphis! Retexi Nereius nova develat
+stringit, frustra Saturnius uteroque inter! Oculis non ritibus Telethusa
+protulit, sed sed aere valvis inhaesuro Pallas animam: qui _quid_, ignes.
+Miseratus fonte Ditis conubia.
+{{< /tab >}}
+
+{{< tab "Linux" >}}
+# Linux
+
+This is tab **Linux** content.
+
+Lorem markdownum insigne. Olympo signis Delphis! Retexi Nereius nova develat
+stringit, frustra Saturnius uteroque inter! Oculis non ritibus Telethusa
+protulit, sed sed aere valvis inhaesuro Pallas animam: qui _quid_, ignes.
+Miseratus fonte Ditis conubia.
+{{< /tab >}}
+
+{{< tab "Windows" >}}
+# Windows
+
+This is tab **Windows** content.
+
+Lorem markdownum insigne. Olympo signis Delphis! Retexi Nereius nova develat
+stringit, frustra Saturnius uteroque inter! Oculis non ritibus Telethusa
+protulit, sed sed aere valvis inhaesuro Pallas animam: qui _quid_, ignes.
+Miseratus fonte Ditis conubia.
+{{< /tab >}}
+
+{{< /tabs >}}`;
+      
+      const result = PageLexer.parse(content);
+      
+      // 验证解析结果
+      const shortcodeItems = result.items.filter(item => item.type === 'shortcode');
+      expect(shortcodeItems.length).toBe(8); // 1个tabs开始，3个tab开始，3个tab结束，1个tabs结束
+      
+      // 验证 tabs shortcode
+      const tabsOpen = shortcodeItems[0] as ShortcodeItem;
+      expect(tabsOpen.name).toBe('tabs');
+      expect(tabsOpen.isClosing).toBe(false);
+      
+      // 验证每个 tab shortcode
+      const tabNames = ['MacOS', 'Linux', 'Windows'];
+      for (let i = 0; i < 3; i++) {
+        const tabOpen = shortcodeItems[i * 2 + 1] as ShortcodeItem;
+        expect(tabOpen.name).toBe('tab');
+        expect(tabOpen.params).toContain(`"${tabNames[i]}"`);
+        expect(tabOpen.isClosing).toBe(false);
+        
+        const tabClose = shortcodeItems[i * 2 + 2] as ShortcodeItem;
+        expect(tabClose.name).toBe('tab');
+        expect(tabClose.isClosing).toBe(true);
+      }
+      
+      // 验证 tabs 闭合标签
+      const tabsClose = shortcodeItems[7] as ShortcodeItem;
+      expect(tabsClose.name).toBe('tabs');
+      expect(tabsClose.isClosing).toBe(true);
+      
+      // 验证内容项
+      const contentItems = result.items.filter(item => item.type === 'content');
+      expect(contentItems.length).toBe(7); // 3个tab的内容，加上间隔的空白
+      
+      // 验证每个tab的内容是否被正确提取
+      const tabContents = contentItems.filter(item => item.val.includes('This is tab'));
+      expect(tabContents.length).toBe(3);
+      expect(tabContents[0].val).toContain('This is tab **MacOS** content');
+      expect(tabContents[1].val).toContain('This is tab **Linux** content');
+      expect(tabContents[2].val).toContain('This is tab **Windows** content');
+    });
   });
 }); 

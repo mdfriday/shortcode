@@ -1,10 +1,9 @@
 /**
  * PageRenderer - 处理整个页面的渲染
- * 这是 PageRenderer 的改进版本，更好地与 PageLexer 和 ShortcodeRenderer 集成
+ * 作为渲染过程的总协调者
  */
 
-import { PageItem, PageLexerResult, ShortcodeItem } from './pageLexer';
-import { PageLexer } from './pageLexer';
+import { PageLexer, PageLexerResult, PageItem, ShortcodeItem } from './pageLexer';
 import { ShortcodeRenderer } from './shortcodeRenderer';
 
 export interface PageRenderResult {
@@ -39,15 +38,27 @@ export class PageRenderer {
 
     /**
      * 渲染页面内容
-     * @param lexerResult PageLexerResult 解析结果
+     * @param content 页面内容
      * @param options 渲染选项
      * @returns 渲染结果
      */
-    public render(lexerResult: PageLexerResult, options?: PageRenderOptions): PageRenderResult {
-        const mergedOptions = { ...this.defaultOptions, ...options };
+    public render(content: string, options?: PageRenderOptions): PageRenderResult {
+        // 使用 PageLexer 解析内容
+        const lexerResult = PageLexer.parse(content);
+        return this.renderLexerResult(lexerResult, options);
+    }
+
+    /**
+     * 渲染 PageLexer 解析结果
+     * @param lexerResult PageLexer 解析结果
+     * @param options 渲染选项
+     * @returns 渲染结果
+     */
+    private renderLexerResult(lexerResult: PageLexerResult, options?: PageRenderOptions): PageRenderResult {
+        const opts = { ...this.defaultOptions, ...options };
         
         // 处理 shortcodes
-        const processedItems = this.processShortcodes(lexerResult.items, mergedOptions);
+        const processedItems = this.processItems(lexerResult.items, opts);
         
         // 构建内容和摘要
         let content = '';
@@ -55,21 +66,42 @@ export class PageRenderer {
         let summaryFound = false;
         let frontmatter: Record<string, any> | undefined;
         
-        for (const item of processedItems) {
-            // 处理 frontmatter
+        // 如果只有 summary divider，返回空内容
+        if (processedItems.length === 1 && processedItems[0].type === 'summary_divider') {
+            return {
+                content: '',
+                summary: '',
+                hasSummaryDivider: true,
+                frontmatter: undefined
+            };
+        }
+        
+        // 如果没有任何项目，返回空内容
+        if (processedItems.length === 0) {
+            return {
+                content: '',
+                summary: '',
+                hasSummaryDivider: false,
+                frontmatter: undefined
+            };
+        }
+        
+        // 如果只有一个内容项目，直接返回它的值
+        if (processedItems.length === 1 && processedItems[0].type === 'content') {
+            return {
+                content: processedItems[0].val,
+                summary: processedItems[0].val.trim(),
+                hasSummaryDivider: false,
+                frontmatter: undefined
+            };
+        }
+        
+        for (let i = 0; i < processedItems.length; i++) {
+            const item = processedItems[i];
+            const nextItem = i < processedItems.length - 1 ? processedItems[i + 1] : null;
+            
             if (item.type === 'frontmatter') {
-                if (lexerResult.frontmatterFormat) {
-                    try {
-                        frontmatter = this.parseFrontmatter(item.val, lexerResult.frontmatterFormat);
-                    } catch (error) {
-                        if (mergedOptions.showWarnings) {
-                            console.warn('Error parsing frontmatter:', error);
-                        }
-                    }
-                }
-                
-                // 如果需要保留 frontmatter，则添加到内容中
-                if (mergedOptions.preserveFrontmatter) {
+                if (opts.preserveFrontmatter) {
                     content += item.val;
                     if (!summaryFound) {
                         summary += item.val;
@@ -78,96 +110,191 @@ export class PageRenderer {
                 continue;
             }
             
-            // 处理 summary divider
             if (item.type === 'summary_divider') {
                 summaryFound = true;
+                // 确保 summary divider 前后有换行符
+                if (content && !content.endsWith('\n')) {
+                    content += '\n';
+                }
+                content += '<!-- more -->';
+                // 只有当下一个项目不是 null 且不以换行符开头时，才添加换行符
+                if (nextItem && !nextItem.val.startsWith('\n')) {
+                    content += '\n';
+                }
                 continue;
             }
             
-            // 处理内容
-            if (item.type === 'content' || item.type === 'shortcode') {
-                content += item.val;
-                if (!summaryFound) {
-                    summary += item.val;
-                }
+            content += item.val;
+            if (!summaryFound) {
+                summary += item.val;
             }
         }
         
-        // 去除 summary 末尾的多余空白
-        summary = summary.trim();
+        // 去掉摘要末尾的换行符
+        summary = summary.trimEnd();
         
         return {
-            content,
+            content: content,
             summary,
             hasSummaryDivider: lexerResult.hasSummaryDivider,
-            frontmatter
+            frontmatter: this.parseFrontmatter(lexerResult)
         };
     }
 
     /**
-     * 一站式处理 Markdown 内容
-     * @param content Markdown 内容
+     * 处理解析后的项目
+     * @param items 解析后的项目数组
      * @param options 渲染选项
-     * @returns 渲染结果
+     * @returns 处理后的项目数组
      */
-    public renderMarkdown(content: string, options?: PageRenderOptions): PageRenderResult {
-        const mergedOptions = { ...this.defaultOptions, ...options };
+    private processItems(items: PageItem[], options: PageRenderOptions): PageItem[] {
+        const result: PageItem[] = [];
+        const shortcodeStack: { index: number; item: ShortcodeItem }[] = [];
+        const processedRanges = new Set<string>();
         
-        // 使用 PageLexer 解析内容
-        const lexerResult = PageLexer.parse(content);
+        // 找到所有的嵌套层级
+        const shortcodePairs: { start: number; end: number; item: ShortcodeItem }[] = [];
         
-        let frontmatter: Record<string, any> | undefined;
-        
-        if (lexerResult.hasFrontmatter && lexerResult.frontmatterFormat) {
-            for (const item of lexerResult.items) {
-                if (item.type === 'frontmatter') {
-                    try {
-                        frontmatter = this.parseFrontmatter(item.val, lexerResult.frontmatterFormat);
-                        
-                        // 调试输出
-                        console.log('Parsed frontmatter:', frontmatter);
-                        
-                        break;
-                    } catch (error) {
-                        if (mergedOptions.showWarnings !== false) {
-                            console.warn('Error parsing frontmatter:', error);
-                        }
-                    }
+        // 第一遍扫描：找到所有匹配的 shortcode 对
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            
+            if (item.type !== 'shortcode') {
+                continue;
+            }
+            
+            const shortcodeItem = item as ShortcodeItem;
+            
+            if (shortcodeItem.isClosing) {
+                const openTag = shortcodeStack.pop();
+                if (openTag && openTag.item.name === shortcodeItem.name) {
+                    shortcodePairs.push({
+                        start: openTag.index,
+                        end: i,
+                        item: openTag.item
+                    });
                 }
+            } else if (!shortcodeItem.isInline) {
+                shortcodeStack.push({ index: i, item: shortcodeItem });
             }
         }
         
-        // 渲染内容
-        const result = this.render(lexerResult, mergedOptions);
+        // 计算深度的辅助函数
+        const getDepth = (pair: { start: number; end: number }) => {
+            let depth = 0;
+            let current = pair;
+            for (const p of shortcodePairs) {
+                if (p.start < current.start && p.end > current.end) {
+                    depth++;
+                    current = p;
+                }
+            }
+            return depth;
+        };
         
-        // 确保 frontmatter 被设置到结果中
-        if (frontmatter) {
-            result.frontmatter = frontmatter;
-        } else if (lexerResult.hasFrontmatter) {
-            // 如果 PageLexer 检测到了 frontmatter 但我们无法解析它，
-            // 创建一个基本的 frontmatter 对象用于测试
-            if (content.includes('title: Test')) {
-                result.frontmatter = { title: 'Test' };
-            } else if (content.includes('title = "Test"')) {
-                result.frontmatter = { 
-                    title: 'Test',
-                    date: 2023,
-                    tags: ['test', 'example']
-                };
-            } else if (content.includes('"title": "Test"')) {
-                result.frontmatter = { 
-                    title: 'Test',
-                    date: '2023-01-01',
-                    tags: ['test', 'example']
-                };
-            } else if (content.includes('title: My Blog Post')) {
-                result.frontmatter = { 
-                    title: 'My Blog Post',
-                    date: '2023-01-01',
-                    tags: ['test', 'example']
-                };
+        // 按照深度和位置排序
+        shortcodePairs.sort((a, b) => {
+            const depthA = getDepth(a);
+            const depthB = getDepth(b);
+            if (depthA !== depthB) {
+                return depthB - depthA; // 深度大的先处理
+            }
+            return a.start - b.start; // 同深度按位置排序
+        });
+        
+        // 创建一个映射来存储已处理的内容
+        const processedContent = new Map<string, string>();
+        
+        // 第二遍扫描：按照深度优先的顺序处理 shortcodes
+        for (const pair of shortcodePairs) {
+            const range = `${pair.start}-${pair.end}`;
+            if (!processedRanges.has(range)) {
+                processedRanges.add(range);
+                
+                // 收集内容：只处理直接子内容
+                let content = '';
+                let i = pair.start + 1;
+                
+                while (i < pair.end) {
+                    const item = items[i];
+                    if (item.type === 'shortcode') {
+                        const shortcodeItem = item as ShortcodeItem;
+                        if (shortcodeItem.isInline || (!shortcodeItem.isClosing && !shortcodePairs.some(p => p.start === i))) {
+                            // 如果是内联 shortcode 或者是没有对应闭合标签的 shortcode
+                            const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
+                            content += rendered;
+                            i++;
+                        } else if (!shortcodeItem.isClosing) {
+                            // 查找这个开始标签对应的范围
+                            const innerPair = shortcodePairs.find(p => p.start === i);
+                            if (innerPair) {
+                                const innerRange = `${innerPair.start}-${innerPair.end}`;
+                                const rendered = processedContent.get(innerRange);
+                                if (rendered) {
+                                    content += rendered;
+                                    i = innerPair.end + 1;
+                                    continue;
+                                }
+                            }
+                            i++;
+                        } else {
+                            i++;
+                        }
+                    } else {
+                        content += item.val;
+                        i++;
+                    }
+                }
+                
+                // 渲染 shortcode
+                const rendered = this.shortcodeRenderer.renderShortcodeItem(pair.item, content, options);
+                processedContent.set(range, rendered);
+            }
+        }
+        
+        // 最后一遍扫描：构建最终结果
+        let i = 0;
+        while (i < items.length) {
+            const item = items[i];
+            
+            if (item.type !== 'shortcode') {
+                result.push(item);
+                i++;
+                continue;
+            }
+            
+            const shortcodeItem = item as ShortcodeItem;
+            
+            if (shortcodeItem.isInline || (!shortcodeItem.isClosing && !shortcodePairs.some(p => p.start === i))) {
+                // 直接渲染内联 shortcode 或没有闭合标签的 shortcode
+                const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
+                if (rendered) {
+                    result.push({
+                        type: 'content',
+                        pos: shortcodeItem.pos,
+                        val: rendered
+                    });
+                }
+                i++;
+            } else if (!shortcodeItem.isClosing) {
+                // 查找这个开始标签对应的范围
+                const pair = shortcodePairs.find(p => p.start === i);
+                if (pair) {
+                    const range = `${pair.start}-${pair.end}`;
+                    const rendered = processedContent.get(range);
+                    if (rendered) {
+                        result.push({
+                            type: 'content',
+                            pos: shortcodeItem.pos,
+                            val: rendered
+                        });
+                        i = pair.end + 1;
+                        continue;
+                    }
+                }
+                i++;
             } else {
-                result.frontmatter = { title: 'Test' };
+                i++;
             }
         }
         
@@ -175,406 +302,47 @@ export class PageRenderer {
     }
 
     /**
-     * 处理 shortcodes
-     * @param items PageItem 数组
+     * 收集 shortcode 的内容
+     * @param items 所有项目
      * @param options 渲染选项
-     * @returns 处理后的 PageItem 数组
+     * @returns 收集到的内容
      */
-    private processShortcodes(items: PageItem[], options: PageRenderOptions): PageItem[] {
-        const result: PageItem[] = [];
+    private collectContent(items: PageItem[], options: PageRenderOptions): string {
+        // 处理这个范围内的项目
+        const processedItems = this.processItems(items, options);
+        let content = '';
         
-        // 第一遍：收集所有 shortcodes 及其内容
-        const shortcodeMap = new Map<number, { 
-            shortcode: ShortcodeItem, 
-            content?: string, 
-            endPos?: number,
-            processed?: boolean
-        }>();
-        
-        const closingShortcodes = new Map<string, number[]>();
-        
-        // 收集所有 shortcodes
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            
-            if (item.type === 'shortcode') {
-                const shortcodeItem = item as ShortcodeItem;
-                
-                if ((shortcodeItem as any).isClosing) {
-                    // 收集闭合标签
-                    if (!closingShortcodes.has(shortcodeItem.name)) {
-                        closingShortcodes.set(shortcodeItem.name, []);
-                    }
-                    closingShortcodes.get(shortcodeItem.name)?.push(i);
-                } else {
-                    // 收集开始标签
-                    shortcodeMap.set(i, { shortcode: shortcodeItem });
-                }
-            }
+        for (const item of processedItems) {
+            content += item.val;
         }
         
-        // 匹配开始和结束标签
-        for (const [index, entry] of shortcodeMap.entries()) {
-            const { shortcode } = entry;
-            
-            // 如果不是内联 shortcode，查找对应的闭合标签
-            if (!(shortcode as any).isInline) {
-                const closingIndices = closingShortcodes.get(shortcode.name) || [];
-                
-                // 找到第一个匹配的闭合标签
-                for (let i = 0; i < closingIndices.length; i++) {
-                    const closingIndex = closingIndices[i];
-                    
-                    if (closingIndex > index) {
-                        // 提取开始和结束标签之间的内容
-                        let content = '';
-                        for (let j = index + 1; j < closingIndex; j++) {
-                            const contentItem = items[j];
-                            if (contentItem.type === 'content') {
-                                content += contentItem.val;
-                            } else if (contentItem.type === 'shortcode') {
-                                // 标记这个 shortcode 已经被处理过
-                                const existingEntry = shortcodeMap.get(j);
-                                if (existingEntry) {
-                                    shortcodeMap.set(j, { ...existingEntry, processed: true });
-                                }
-                                // 添加 shortcode 的原始标记
-                                const shortcodeItem = contentItem as ShortcodeItem;
-                                if ((shortcodeItem as any).isClosing) {
-                                    content += `{{< /${shortcodeItem.name} >}}`;
-                                } else {
-                                    content += `{{< ${shortcodeItem.name} ${shortcodeItem.params.join(' ')} >}}`;
-                                }
-                            }
-                        }
-                        
-                        // 更新 shortcode 条目
-                        shortcodeMap.set(index, { 
-                            ...entry, 
-                            content, 
-                            endPos: closingIndex 
-                        });
-                        
-                        // 从闭合标签列表中移除已匹配的标签
-                        closingIndices.splice(i, 1);
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // 第二遍：渲染内容
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            
-            if (item.type === 'shortcode') {
-                const entry = shortcodeMap.get(i);
-                
-                // 如果这个 shortcode 已经被处理过，跳过
-                if (entry && entry.processed) {
-                    continue;
-                }
-                
-                // 如果是开始标签，渲染 shortcode
-                if (entry && !(item as any).isClosing) {
-                    const { shortcode, content } = entry;
-                    
-                    try {
-                        // 使用 ShortcodeRenderer 渲染 shortcode
-                        const renderedContent = this.shortcodeRenderer.renderShortcode(
-                            shortcode.name,
-                            shortcode.params,
-                            content,
-                            {
-                                preserveUnknownShortcodes: options.preserveUnknownShortcodes,
-                                showWarnings: options.showWarnings,
-                                onError: options.onError
-                            }
-                        );
-                        
-                        // 创建一个新的内容项
-                        result.push({
-                            type: 'content',
-                            pos: shortcode.pos,
-                            val: renderedContent
-                        });
-                        
-                        // 如果有结束位置，跳过中间的内容和结束标签
-                        if (entry.endPos) {
-                            i = entry.endPos;
-                        }
-                    } catch (error: unknown) {
-                        // 处理渲染错误
-                        if (options.showWarnings) {
-                            console.error(`Error processing shortcode ${shortcode.name}:`, error);
-                        }
-                        
-                        // 使用自定义错误处理或默认错误消息
-                        const errorMessage = options.onError 
-                            ? options.onError(error instanceof Error ? error : new Error(String(error)), shortcode.name)
-                            : `Error processing shortcode ${shortcode.name}`;
-                        
-                        result.push({
-                            type: 'content',
-                            pos: shortcode.pos,
-                            val: errorMessage
-                        });
-                    }
-                }
-                // 如果是未匹配的闭合标签，根据选项决定是否保留
-                else if ((item as any).isClosing) {
-                    if (options.preserveUnknownShortcodes) {
-                        result.push(item);
-                    }
-                }
-            } else {
-                result.push(item);
-            }
-        }
-        
-        return result;
+        return content;
     }
 
     /**
      * 解析 frontmatter
-     * @param content frontmatter 内容
-     * @param format frontmatter 格式
+     * @param lexerResult PageLexer 解析结果
      * @returns 解析后的 frontmatter 对象
      */
-    private parseFrontmatter(content: string, format: string): Record<string, any> {
-        // 提取 frontmatter 内容（去除分隔符）
-        let frontmatterContent = content;
+    private parseFrontmatter(lexerResult: PageLexerResult): Record<string, any> | undefined {
+        if (!lexerResult.hasFrontmatter || !lexerResult.frontmatterFormat) {
+            return undefined;
+        }
+        
+        const frontmatterItem = lexerResult.items.find(item => item.type === 'frontmatter');
+        if (!frontmatterItem) {
+            return undefined;
+        }
         
         try {
-            if (format === 'yaml') {
-                // 移除 YAML 分隔符 ---
-                frontmatterContent = content.replace(/^---\s*\n/, '').replace(/\n---\s*$/, '');
-                const result = this.parseYAML(frontmatterContent);
-                
-                // 确保结果不为空
-                if (Object.keys(result).length === 0) {
-                    // 尝试更简单的解析方法
-                    const lines = frontmatterContent.split('\n');
-                    const simpleResult: Record<string, any> = {};
-                    
-                    for (const line of lines) {
-                        const trimmedLine = line.trim();
-                        if (!trimmedLine || trimmedLine.startsWith('#')) continue;
-                        
-                        const parts = trimmedLine.split(':');
-                        if (parts.length >= 2) {
-                            const key = parts[0].trim();
-                            const value = parts.slice(1).join(':').trim();
-                            simpleResult[key] = value;
-                        }
-                    }
-                    
-                    if (Object.keys(simpleResult).length > 0) {
-                        return simpleResult;
-                    }
-                    
-                    // 如果仍然无法解析，返回测试所需的默认值
-                    if (frontmatterContent.includes('title: Test')) {
-                        return { title: 'Test' };
-                    } else if (frontmatterContent.includes('title: My Blog Post')) {
-                        return { 
-                            title: 'My Blog Post',
-                            date: '2023-01-01',
-                            tags: ['test', 'example']
-                        };
-                    }
-                }
-                
-                return result;
-            } else if (format === 'toml') {
-                // 移除 TOML 分隔符 +++
-                frontmatterContent = content.replace(/^\+\+\+\s*\n/, '').replace(/\n\+\+\+\s*$/, '');
-                const result = this.parseTOML(frontmatterContent);
-                
-                // 如果解析失败，返回测试所需的默认值
-                if (Object.keys(result).length === 0 && frontmatterContent.includes('title = "Test"')) {
-                    return { 
-                        title: 'Test',
-                        date: 2023,
-                        tags: ['test', 'example']
-                    };
-                }
-                
-                return result;
-            } else if (format === 'json') {
-                // 移除 JSON 分隔符 {{}}
-                frontmatterContent = content.replace(/^{{\s*\n/, '').replace(/\n}}\s*$/, '');
-                try {
-                    const result = JSON.parse(frontmatterContent);
-                    
-                    // 如果解析失败，返回测试所需的默认值
-                    if (Object.keys(result).length === 0 && frontmatterContent.includes('"title": "Test"')) {
-                        return { 
-                            title: 'Test',
-                            date: '2023-01-01',
-                            tags: ['test', 'example']
-                        };
-                    }
-                    
-                    return result;
-                } catch (error: unknown) {
-                    // 如果解析失败，返回测试所需的默认值
-                    if (frontmatterContent.includes('"title": "Test"')) {
-                        return { 
-                            title: 'Test',
-                            date: '2023-01-01',
-                            tags: ['test', 'example']
-                        };
-                    }
-                    
-                    throw new Error(`Invalid JSON frontmatter: ${error instanceof Error ? error.message : String(error)}`);
-                }
+            // 这里可以根据 frontmatterFormat 使用不同的解析器
+            // 目前简单返回原始内容
+            return { content: frontmatterItem.val };
+        } catch (error) {
+            if (this.defaultOptions.showWarnings) {
+                console.warn('Error parsing frontmatter:', error);
             }
-        } catch (error: unknown) {
-            console.error(`Error parsing ${format} frontmatter:`, error);
-            
-            // 如果解析失败，返回测试所需的默认值
-            if (content.includes('title: Test') || content.includes('title = "Test"') || content.includes('"title": "Test"')) {
-                return { title: 'Test' };
-            } else if (content.includes('title: My Blog Post')) {
-                return { 
-                    title: 'My Blog Post',
-                    date: '2023-01-01',
-                    tags: ['test', 'example']
-                };
-            }
-            
-            throw new Error(`Error parsing ${format} frontmatter: ${error instanceof Error ? error.message : String(error)}`);
+            return undefined;
         }
-        
-        // 默认返回空对象
-        return {};
-    }
-
-    /**
-     * 解析 YAML
-     * @param content YAML 内容
-     * @returns 解析后的对象
-     */
-    private parseYAML(content: string): Record<string, any> {
-        // 简单的 YAML 解析实现
-        // 注意：实际应用中应该使用专门的 YAML 解析库
-        const result: Record<string, any> = {};
-        const lines = content.split('\n');
-        
-        for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (!trimmedLine || trimmedLine.startsWith('#')) {
-                continue;
-            }
-            
-            const colonIndex = trimmedLine.indexOf(':');
-            if (colonIndex > 0) {
-                const key = trimmedLine.substring(0, colonIndex).trim();
-                let value = trimmedLine.substring(colonIndex + 1).trim();
-                
-                // 如果值为空，设置为空字符串
-                if (!value) {
-                    result[key] = '';
-                    continue;
-                }
-                
-                // 处理引号包裹的字符串
-                if ((value.startsWith('"') && value.endsWith('"')) || 
-                    (value.startsWith("'") && value.endsWith("'"))) {
-                    value = value.substring(1, value.length - 1);
-                    result[key] = value;
-                    continue;
-                }
-                
-                // 处理数组
-                if (value.startsWith('[') && value.endsWith(']')) {
-                    const arrayContent = value.substring(1, value.length - 1);
-                    const items = arrayContent.split(',').map(item => {
-                        const trimmed = item.trim();
-                        // 处理数组中的引号包裹字符串
-                        if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || 
-                            (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-                            return trimmed.substring(1, trimmed.length - 1);
-                        }
-                        return trimmed;
-                    });
-                    result[key] = items;
-                }
-                // 处理布尔值
-                else if (value === 'true' || value === 'false') {
-                    result[key] = value === 'true';
-                }
-                // 处理数字
-                else if (!isNaN(Number(value))) {
-                    result[key] = Number(value);
-                }
-                // 其他情况当作字符串处理
-                else {
-                    result[key] = value;
-                }
-            }
-        }
-        
-        return result;
-    }
-
-    /**
-     * 解析 TOML
-     * @param content TOML 内容
-     * @returns 解析后的对象
-     */
-    private parseTOML(content: string): Record<string, any> {
-        // 简单的 TOML 解析实现
-        // 注意：实际应用中应该使用专门的 TOML 解析库
-        const result: Record<string, any> = {};
-        const lines = content.split('\n');
-        
-        for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (!trimmedLine || trimmedLine.startsWith('#')) {
-                continue;
-            }
-            
-            const equalIndex = trimmedLine.indexOf('=');
-            if (equalIndex > 0) {
-                const key = trimmedLine.substring(0, equalIndex).trim();
-                let value = trimmedLine.substring(equalIndex + 1).trim();
-                
-                // 处理字符串（带引号）
-                if ((value.startsWith('"') && value.endsWith('"')) || 
-                    (value.startsWith("'") && value.endsWith("'"))) {
-                    result[key] = value.substring(1, value.length - 1);
-                } 
-                // 处理数组
-                else if (value.startsWith('[') && value.endsWith(']')) {
-                    const arrayContent = value.substring(1, value.length - 1);
-                    const items = arrayContent.split(',').map(item => {
-                        const trimmed = item.trim();
-                        // 处理数组中的引号包裹字符串
-                        if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || 
-                            (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-                            return trimmed.substring(1, trimmed.length - 1);
-                        }
-                        return trimmed;
-                    });
-                    result[key] = items;
-                }
-                // 处理布尔值
-                else if (value === 'true' || value === 'false') {
-                    result[key] = value === 'true';
-                }
-                // 处理数字
-                else if (!isNaN(Number(value))) {
-                    result[key] = Number(value);
-                }
-                // 其他情况当作字符串处理
-                else {
-                    result[key] = value;
-                }
-            }
-        }
-        
-        return result;
     }
 } 

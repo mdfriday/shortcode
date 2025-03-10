@@ -1,16 +1,42 @@
 /**
  * ShortcodeRenderer - 渲染 shortcodes
- * 这是 ShortcodeRenderer 的改进版本，修复了测试中发现的问题
+ * 专注于单个 shortcode 的渲染
  */
 
-import { PageLexer, ShortcodeItem } from './pageLexer';
+import { ShortcodeItem } from './pageLexer';
+import { New, Template } from '@mdfriday/text-template';
+
+/**
+ * Shortcode 类型
+ */
+export type ShortcodeType = 'function' | 'template';
+
+/**
+ * 基础数据提供者接口
+ */
+export interface BaseDataProvider {
+    Get: (paramName: string | number) => string | undefined;
+    content?: string;
+    [key: string]: any;
+}
+
+/**
+ * 模板 Shortcode 配置
+ */
+export interface TemplateShortcodeConfig {
+    template: string;
+    funcMap?: Map<string, (...args: any[]) => any>;
+    dataProvider?: (params: string[], content?: string) => Record<string, any>;
+}
 
 /**
  * Shortcode 定义
  */
 export interface Shortcode {
     name: string;
+    type: ShortcodeType;
     render: (params: string[], content?: string) => string;
+    template?: Template;
 }
 
 /**
@@ -21,32 +47,19 @@ export interface RenderOptions {
     preserveUnknownShortcodes?: boolean;
     /** 是否在控制台输出警告 */
     showWarnings?: boolean;
-    /** 是否保留 frontmatter */
-    preserveFrontmatter?: boolean;
     /** 自定义错误处理函数 */
     onError?: (error: Error, shortcodeName: string) => string;
 }
 
 /**
- * ShortcodeEntry 定义，用于跟踪 shortcode 处理状态
- */
-interface ShortcodeEntry {
-    shortcode: ShortcodeItem;
-    content?: string;
-    endPos?: number;
-    processed?: boolean;
-}
-
-/**
  * ShortcodeRenderer 类
- * 用于注册和渲染 shortcodes
+ * 用于注册和渲染单个 shortcode
  */
 export class ShortcodeRenderer {
     private shortcodes: Map<string, Shortcode> = new Map();
     private defaultOptions: RenderOptions = {
         preserveUnknownShortcodes: true,
-        showWarnings: true,
-        preserveFrontmatter: false
+        showWarnings: true
     };
 
     /**
@@ -58,14 +71,83 @@ export class ShortcodeRenderer {
     }
 
     /**
-     * 注册一个 shortcode
+     * 注册一个函数类型的 shortcode
      * @param name shortcode 名称
      * @param renderFn 渲染函数
      */
     public registerShortcode(name: string, renderFn: (params: string[], content?: string) => string): void {
         this.shortcodes.set(name, {
             name,
+            type: 'function',
             render: renderFn
+        });
+    }
+
+    /**
+     * 创建基础数据提供者
+     * @param params shortcode 参数
+     * @param content shortcode 内容
+     * @returns 基础数据提供者对象
+     */
+    private createBaseDataProvider(params: string[], content?: string): BaseDataProvider {
+        return {
+            Get: (paramName: string | number): string | undefined => {
+                if (typeof paramName === 'number') {
+                    return params[paramName];
+                }
+                // Named parameters in the format name="value"
+                const namedParam = params.find(p => p.startsWith(`${paramName}=`));
+                if (namedParam) {
+                    return namedParam.split('=')[1].replace(/^["']|["']$/g, '');
+                }
+                return undefined;
+            },
+            content
+        };
+    }
+
+    /**
+     * 注册一个模板类型的 shortcode
+     * @param name shortcode 名称
+     * @param config 模板 shortcode 配置
+     */
+    public registerTemplateShortcode(name: string, config: TemplateShortcodeConfig): void {
+        const tmpl = New(name);
+        
+        if (config.funcMap) {
+            tmpl.Funcs(config.funcMap);
+        }
+
+        const [parsedTmpl, parseErr] = tmpl.Parse(config.template);
+        if (parseErr) {
+            throw new Error(`Failed to parse template for shortcode ${name}: ${parseErr}`);
+        }
+
+        this.shortcodes.set(name, {
+            name,
+            type: 'template',
+            template: parsedTmpl,
+            render: (params: string[], content?: string) => {
+                try {
+                    // 创建基础数据提供者
+                    const baseData = this.createBaseDataProvider(params, content);
+                    
+                    // 合并用户提供的数据
+                    const userData = config.dataProvider ? config.dataProvider(params, content) : {};
+                    const data = {
+                        ...baseData,
+                        ...userData
+                    };
+
+                    const [result, execErr] = parsedTmpl.Execute(data);
+                    if (execErr) {
+                        throw new Error(`Template execution error: ${execErr}`);
+                    }
+                    return result;
+                } catch (error) {
+                    throw new Error(`Failed to render template shortcode ${name}: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            }
         });
     }
 
@@ -90,360 +172,45 @@ export class ShortcodeRenderer {
 
     /**
      * 渲染一个 shortcode
-     * @param name shortcode 名称
-     * @param params 参数数组
-     * @param content 内容（可选）
+     * @param shortcodeItem shortcode 项
+     * @param content shortcode 的内容
      * @param options 渲染选项
      * @returns 渲染结果
      */
-    public renderShortcode(
-        name: string, 
-        params: string[], 
-        content?: string, 
-        options?: RenderOptions
-    ): string {
+    public renderShortcodeItem(shortcodeItem: ShortcodeItem, content?: string, options?: RenderOptions): string {
         const opts = { ...this.defaultOptions, ...options };
-        const shortcode = this.getShortcode(name);
+        const shortcode = this.getShortcode(shortcodeItem.name);
         
         if (!shortcode) {
             if (opts.showWarnings) {
-                console.warn(`Unknown shortcode: ${name}`);
+                console.warn(`Unknown shortcode: ${shortcodeItem.name}`);
             }
             
             if (opts.preserveUnknownShortcodes) {
                 // 保留原始标记
-                let original = `{{< ${name} `;
-                if (params.length > 0) {
-                    original += params.join(' ');
+                if (shortcodeItem.isClosing) {
+                    return shortcodeItem.val;
                 }
                 if (content) {
-                    original += ` >}}${content}{{< /${name} >}}`;
-                } else {
-                    original += ` >}}`;
+                    return shortcodeItem.val + content + `{{< /${shortcodeItem.name} >}}`;
                 }
-                return original;
+                return shortcodeItem.val;
             }
             
-            // 返回内容或空字符串
             return content || '';
         }
         
         try {
-            // 处理嵌套的 shortcodes
-            let processedContent = content;
-            if (content && content.includes('{{<')) {
-                // 使用正则表达式匹配嵌套的 shortcodes
-                const shortcodeRegex = /{{<\s*([a-zA-Z0-9_.-]+)(?:\s+([^>]*?))?\s*>}}([\s\S]*?){{<\s*\/\s*\1\s*>}}/g;
-                processedContent = content.replace(shortcodeRegex, (match, nestedName, nestedParams, nestedContent) => {
-                    const parsedParams = nestedParams ? ShortcodeRenderer.parseParams(nestedParams) : [];
-                    return this.renderShortcode(nestedName, parsedParams, nestedContent, opts);
-                });
-            }
-            
-            // 调用渲染函数，确保传递正确的参数
-            return shortcode.render(params, processedContent);
+            return shortcode.render(shortcodeItem.params, content);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`Error rendering shortcode ${name}:`, errorMessage);
+            console.error(`Error rendering shortcode ${shortcodeItem.name}:`, errorMessage);
             
             if (opts.onError) {
-                return opts.onError(error instanceof Error ? error : new Error(String(error)), name);
+                return opts.onError(error instanceof Error ? error : new Error(String(error)), shortcodeItem.name);
             }
             
-            return `Error rendering shortcode ${name}: ${errorMessage}`;
+            return `Error rendering shortcode ${shortcodeItem.name}: ${errorMessage}`;
         }
-    }
-
-    /**
-     * 解析并渲染文本中的 shortcodes
-     * @param text 包含 shortcodes 的文本
-     * @param options 渲染选项
-     * @returns 渲染后的文本
-     */
-    public parseAndRender(text: string, options?: RenderOptions): string {
-        if (!text) {
-            return '';
-        }
-        
-        const opts = { ...this.defaultOptions, ...options };
-        
-        // 检查是否有 frontmatter
-        const frontmatterRegex = /^(---|\+\+\+|{{)[\s\S]*?(---|\+\+\+|}})[\r\n]*/;
-        let frontmatter = '';
-        let content = text;
-        
-        const frontmatterMatch = text.match(frontmatterRegex);
-        if (frontmatterMatch) {
-            frontmatter = frontmatterMatch[0];
-            content = text.substring(frontmatterMatch[0].length);
-            
-            // 如果不保留 frontmatter，则从结果中移除
-            if (!opts.preserveFrontmatter) {
-                text = content;
-            }
-        }
-        
-        // 匹配带内容的 shortcodes: {{< name params >}}content{{< /name >}}
-        const shortcodeWithContentRegex = /{{<\s*([a-zA-Z0-9_.-]+)(?:\s+([^>]*?))?\s*>}}([\s\S]*?){{<\s*\/\s*\1\s*>}}/g;
-        
-        // 匹配内联 shortcodes: {{< name params />}}
-        const inlineShortcodeRegex = /{{<\s*([a-zA-Z0-9_.-]+)(?:\s+([^>]*?))?\s*\/\s*>}}/g;
-        
-        // 匹配不带内容的 shortcodes: {{< name params >}}
-        const shortcodeWithoutContentRegex = /{{<\s*([a-zA-Z0-9_.-]+)(?:\s+([^>]*?))?\s*>}}/g;
-        
-        // 使用一个函数来处理替换，以便递归处理嵌套的 shortcodes
-        const processShortcodes = (input: string): string => {
-            // 先处理带内容的 shortcodes
-            let processed = input.replace(shortcodeWithContentRegex, (match, name, paramsStr, content) => {
-                // 递归处理内容中的嵌套 shortcodes
-                const processedContent = processShortcodes(content);
-                const params = paramsStr ? ShortcodeRenderer.parseParams(paramsStr) : [];
-                return this.renderShortcode(name, params, processedContent, opts);
-            });
-            
-            // 处理内联 shortcodes
-            processed = processed.replace(inlineShortcodeRegex, (match, name, paramsStr) => {
-                const params = paramsStr ? ShortcodeRenderer.parseParams(paramsStr) : [];
-                return this.renderShortcode(name, params, undefined, opts);
-            });
-            
-            // 处理不带内容的 shortcodes
-            processed = processed.replace(shortcodeWithoutContentRegex, (match, name, paramsStr) => {
-                const params = paramsStr ? ShortcodeRenderer.parseParams(paramsStr) : [];
-                return this.renderShortcode(name, params, undefined, opts);
-            });
-            
-            return processed;
-        };
-        
-        // 处理所有 shortcodes
-        let result = processShortcodes(text);
-        
-        return result;
-    }
-
-    /**
-     * 渲染解析后的内容
-     * @param parsed PageLexer 解析结果
-     * @param options 渲染选项
-     * @returns 渲染后的文本
-     */
-    public renderParsedContent(parsed: { items: any[] }, options?: RenderOptions): string {
-        const opts = { ...this.defaultOptions, ...options };
-        let result = '';
-        
-        // 第一遍：收集所有 shortcodes 及其内容
-        const shortcodeMap = new Map<number, ShortcodeEntry>();
-        
-        const closingShortcodes = new Map<string, number[]>();
-        
-        // 收集所有 shortcodes
-        for (let i = 0; i < parsed.items.length; i++) {
-            const item = parsed.items[i];
-            
-            if (item.type === 'shortcode') {
-                const shortcodeItem = item as ShortcodeItem;
-                
-                if (shortcodeItem.isClosing) {
-                    // 收集闭合标签
-                    if (!closingShortcodes.has(shortcodeItem.name)) {
-                        closingShortcodes.set(shortcodeItem.name, []);
-                    }
-                    closingShortcodes.get(shortcodeItem.name)?.push(i);
-                } else {
-                    // 收集开始标签
-                    shortcodeMap.set(i, { shortcode: shortcodeItem });
-                }
-            }
-        }
-        
-        // 匹配开始和结束标签
-        for (const [index, entry] of shortcodeMap.entries()) {
-            const { shortcode } = entry;
-            
-            // 如果不是内联 shortcode，查找对应的闭合标签
-            if (!shortcode.isInline) {
-                const closingIndices = closingShortcodes.get(shortcode.name) || [];
-                
-                // 找到第一个匹配的闭合标签
-                for (let i = 0; i < closingIndices.length; i++) {
-                    const closingIndex = closingIndices[i];
-                    
-                    if (closingIndex > index) {
-                        // 提取开始和结束标签之间的内容
-                        let content = '';
-                        for (let j = index + 1; j < closingIndex; j++) {
-                            const contentItem = parsed.items[j];
-                            if (contentItem.type === 'content') {
-                                content += contentItem.val;
-                            } else if (contentItem.type === 'shortcode' && !contentItem.isClosing) {
-                                // 标记这个 shortcode 已经被处理过
-                                const existingEntry = shortcodeMap.get(j);
-                                if (existingEntry) {
-                                    shortcodeMap.set(j, { ...existingEntry, processed: true });
-                                }
-                            }
-                        }
-                        
-                        // 更新 shortcode 条目
-                        shortcodeMap.set(index, { 
-                            ...entry, 
-                            content, 
-                            endPos: closingIndex 
-                        });
-                        
-                        // 从闭合标签列表中移除已匹配的标签
-                        closingIndices.splice(i, 1);
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // 第二遍：渲染内容
-        for (let i = 0; i < parsed.items.length; i++) {
-            const item = parsed.items[i];
-            
-            if (item.type === 'shortcode') {
-                const entry = shortcodeMap.get(i);
-                
-                // 如果这个 shortcode 已经被处理过，跳过
-                if (entry && entry.processed) {
-                    continue;
-                }
-                
-                // 如果是开始标签，渲染 shortcode
-                if (entry && !item.isClosing) {
-                    const { shortcode, content } = entry;
-                    
-                    result += this.renderShortcode(
-                        shortcode.name,
-                        shortcode.params,
-                        content,
-                        opts
-                    );
-                    
-                    // 如果有结束位置，跳过中间的内容和结束标签
-                    if (entry.endPos) {
-                        i = entry.endPos;
-                    }
-                }
-                // 如果是未匹配的闭合标签，根据选项决定是否保留
-                else if (item.isClosing) {
-                    if (opts.preserveUnknownShortcodes) {
-                        result += `{{< /${item.name} >}}`;
-                    }
-                }
-            } else if (item.type === 'content') {
-                result += item.val;
-            } else if (item.type === 'frontmatter' && opts.preserveFrontmatter) {
-                result += item.val;
-            }
-            // 忽略 summary_divider
-        }
-        
-        return result;
-    }
-
-    /**
-     * 解析参数文本
-     * @param paramsText 参数文本
-     * @returns 参数数组
-     */
-    public static parseParams(paramsText: string): string[] {
-        if (!paramsText || !paramsText.trim()) {
-            return [];
-        }
-        
-        // 特殊处理内联标记
-        if (paramsText.trim() === '/') {
-            return [];
-        }
-        
-        const params: string[] = [];
-        let current = '';
-        let inQuote = false;
-        let quoteChar = '';
-        
-        for (let i = 0; i < paramsText.length; i++) {
-            const char = paramsText[i];
-            
-            // 处理引号
-            if ((char === '"' || char === "'") && (i === 0 || paramsText[i - 1] !== '\\')) {
-                if (!inQuote) {
-                    inQuote = true;
-                    quoteChar = char;
-                    current += char; // 保留引号
-                } else if (char === quoteChar) {
-                    inQuote = false;
-                    quoteChar = '';
-                    current += char; // 保留引号
-                    
-                    // 如果引号结束，添加参数并重置
-                    params.push(current);
-                    current = '';
-                } else {
-                    current += char;
-                }
-                continue;
-            }
-            
-            // 处理空格
-            if (char === ' ' && !inQuote) {
-                if (current) {
-                    params.push(current);
-                    current = '';
-                }
-                continue;
-            }
-            
-            // 添加字符
-            current += char;
-        }
-        
-        // 添加最后一个参数
-        if (current) {
-            params.push(current);
-        }
-        
-        return params;
-    }
-
-    /**
-     * 一站式处理 Markdown 内容
-     * @param content Markdown 内容
-     * @param options 渲染选项
-     * @returns 处理结果
-     */
-    public processMarkdown(content: string, options?: RenderOptions): {
-        content: string;
-        frontmatter: string | null;
-        hasSummaryDivider: boolean;
-    } {
-        const opts = { ...this.defaultOptions, ...options };
-        
-        // 使用 PageLexer 解析内容
-        const parsed = PageLexer.parse(content);
-        
-        // 提取 frontmatter
-        let frontmatter: string | null = null;
-        if (parsed.hasFrontmatter) {
-            for (const item of parsed.items) {
-                if (item.type === 'frontmatter') {
-                    frontmatter = item.val;
-                    break;
-                }
-            }
-        }
-        
-        // 渲染内容
-        const renderedContent = this.renderParsedContent(parsed, opts);
-        
-        return {
-            content: renderedContent,
-            frontmatter,
-            hasSummaryDivider: parsed.hasSummaryDivider
-        };
     }
 } 

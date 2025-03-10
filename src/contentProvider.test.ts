@@ -33,7 +33,7 @@ describe('ContentProvider', () => {
   describe('基本内容处理', () => {
     test('应该正确处理简单文本内容', async () => {
       const content = 'This is a simple content.';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toBe('This is a simple content.');
       expect(result.summary).toBe('This is a simple content.');
@@ -42,7 +42,7 @@ describe('ContentProvider', () => {
 
     test('应该正确处理带 shortcode 的内容', async () => {
       const content = 'This is {{< bold >}}bold{{< /bold >}} text.';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toContain('<strong>bold</strong>');
       expect(result.summary).toContain('<strong>bold</strong>');
@@ -51,7 +51,7 @@ describe('ContentProvider', () => {
 
     test('应该正确处理带摘要分隔符的内容', async () => {
       const content = 'This is the summary.\n<!-- more -->\nThis is the rest of the content.';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toContain('This is the summary.');
       expect(result.content).toContain('This is the rest of the content.');
@@ -63,7 +63,7 @@ describe('ContentProvider', () => {
   describe('从文本获取内容', () => {
     test('应该正确处理简单文本', () => {
       const text = 'This is a simple text.';
-      const result = contentProvider.getPageContentFromText(text);
+      const result = contentProvider.getPageContent(text);
 
       expect(result.content).toBe('This is a simple text.');
       expect(result.summary).toBe('This is a simple text.');
@@ -72,7 +72,7 @@ describe('ContentProvider', () => {
 
     test('应该正确处理带 shortcode 的文本', () => {
       const text = 'Text with {{< link url="https://example.com" >}}a link{{< /link >}}.';
-      const result = contentProvider.getPageContentFromText(text);
+      const result = contentProvider.getPageContent(text);
 
       expect(result.content).toContain('<a href="https://example.com">a link</a>');
       expect(result.summary).toContain('<a href="https://example.com">a link</a>');
@@ -81,7 +81,7 @@ describe('ContentProvider', () => {
 
     test('应该正确处理带摘要分隔符的文本', () => {
       const text = 'Summary text.\n<!-- more -->\nFull content.';
-      const result = contentProvider.getPageContentFromText(text);
+      const result = contentProvider.getPageContent(text);
 
       expect(result.content).toContain('Summary text.');
       expect(result.content).toContain('Full content.');
@@ -96,7 +96,7 @@ describe('ContentProvider', () => {
 <!-- more -->
 More {{< bold >}}bold{{< /bold >}} content.`;
 
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toContain('<strong>bold</strong>');
       expect(result.content).toContain('<a href="https://example.com">test link</a>');
@@ -108,7 +108,7 @@ More {{< bold >}}bold{{< /bold >}} content.`;
 
     test('应该正确处理嵌套的 shortcodes', async () => {
       const content = 'This is {{< bold >}}bold with {{< link url="https://example.com" >}}a nested link{{< /link >}}{{< /bold >}}.';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       // 由于当前实现是按顺序处理 shortcodes，而不是递归处理
       expect(result.content).toBe('This is <strong>bold with <a href="https://example.com">a nested link</a></strong>.');
@@ -119,7 +119,7 @@ More {{< bold >}}bold{{< /bold >}} content.`;
   describe('错误处理', () => {
     test('应该正确处理未知的 shortcode', async () => {
       const content = 'This is {{< unknown  >}}content{{< /unknown >}}.';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       // 默认应该保留未知的 shortcode 标记
       expect(result.content).toBe('This is {{< unknown  >}}content{{< /unknown >}}.');
@@ -127,7 +127,7 @@ More {{< bold >}}bold{{< /bold >}} content.`;
 
     test('应该正确处理格式错误的 shortcode', async () => {
       const content = 'This is {{< bold >}}{{< /bold >}} shortcode.';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       // 应该尽可能处理格式错误的 shortcode
       expect(result.content).toBe('This is <strong></strong> shortcode.');
@@ -137,7 +137,7 @@ More {{< bold >}}bold{{< /bold >}} content.`;
   describe('边缘情况', () => {
     test('应该正确处理空内容', async () => {
       const content = '';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toBe('');
       expect(result.summary).toBe('');
@@ -146,7 +146,7 @@ More {{< bold >}}bold{{< /bold >}} content.`;
 
     test('应该正确处理只有摘要分隔符的内容', async () => {
       const content = '<!-- more -->';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toBe('');
       expect(result.summary).toBe('');
@@ -155,7 +155,7 @@ More {{< bold >}}bold{{< /bold >}} content.`;
 
     test('应该正确处理只包含空白字符的内容', async () => {
       const content = '   \n  \t  \n  ';
-      const result = await contentProvider.getPageContent('test.md', content);
+      const result = await contentProvider.getPageContent(content);
 
       expect(result.content).toBe(content);
       expect(result.summary).toBe(content.trim());
