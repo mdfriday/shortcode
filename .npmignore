@@ -1,0 +1,38 @@
+# Source
+src/
+tests/
+
+# Config files
+tsconfig.json
+jest.config.js
+.gitignore
+.editorconfig
+.prettierrc
+.eslintrc
+.eslintignore
+
+# Development files
+coverage/
+node_modules/
+*.log
+.DS_Store
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test files
+__tests__/
+*.test.ts
+*.spec.ts
+*.test.js
+*.spec.js
+
+# Temporary files
+*.tgz
+.npm
+.tmp/ 

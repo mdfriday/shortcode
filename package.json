@@ -1,7 +1,7 @@
 {
   "name": "@mdfriday/shortcode-compiler",
-  "version": "0.1.0",
-  "description": "A shortcode compiler for markdown content, supporting nested shortcodes and frontmatter",
+  "version": "0.2.0",
+  "description": "A shortcode compiler for markdown content, supporting function and template shortcodes, nested shortcodes and frontmatter",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -51,6 +51,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@mdfriday/text-template": "^0.1.0"
+    "@mdfriday/text-template": "^0.1.1"
   }
 }
