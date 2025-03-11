@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const icons = ['megaphone', 'mobile', 'link', 'sun', 'default'];
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1'];
+
+        icons.forEach((icon, index) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 24;
+            canvas.height = 24;
+            document.body.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            
+            // 填充背景
+            ctx.fillStyle = colors[index];
+            ctx.fillRect(0, 0, 24, 24);
+            
+            // 绘制文字
+            ctx.fillStyle = 'white';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(icon[0].toUpperCase(), 12, 12);
+            
+            // 保存为PNG
+            const link = document.createElement('a');
+            link.download = `${icon}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
+</body>
+</html> 
