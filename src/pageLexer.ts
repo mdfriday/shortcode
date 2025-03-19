@@ -33,8 +33,8 @@ export class PageLexer {
     };
     private static readonly summaryDividerPattern = /^<!--\s*more\s*-->\s*$/m;
     
-    // 改进的 shortcode 正则表达式，更准确地匹配 shortcode
-    private static readonly shortcodePattern = /{{<\s*(?:(\/)?\s*([a-zA-Z0-9_.-]+)|([a-zA-Z0-9_.-]+)(?:\s+([^>]*?))?\s*(?:\/)?)\s*>}}/g;
+    // 改进的 shortcode 开始标记正则表达式
+    private static readonly shortcodeStartPattern = /{{<\s*(\/)?\s*([a-zA-Z0-9_.-]+)/g;
 
     /**
      * 解析markdown内容
@@ -115,112 +115,163 @@ export class PageLexer {
      */
     private static parseContentWithShortcodes(content: string, startPos: number, items: PageItem[]): void {
         let lastPos = 0;
-        let match: RegExpExecArray | null;
+        let currentPos = 0;
         
-        // 重置正则表达式
-        const regex = new RegExp(this.shortcodePattern);
-        regex.lastIndex = 0;
-        
-        while ((match = regex.exec(content)) !== null) {
-            const matchPos = match.index;
-            const matchText = match[0];
+        while (currentPos < content.length) {
+            // 查找下一个可能的 shortcode 开始位置
+            const nextShortcodePos = content.indexOf('{{<', currentPos);
+            
+            if (nextShortcodePos === -1) {
+                // 没有更多 shortcode，添加剩余内容
+                if (currentPos < content.length) {
+                    items.push({
+                        type: 'content',
+                        pos: startPos + currentPos,
+                        val: content.substring(currentPos)
+                    });
+                }
+                break;
+            }
             
             // 添加 shortcode 前的内容
-            if (matchPos > lastPos) {
+            if (nextShortcodePos > currentPos) {
                 items.push({
                     type: 'content',
-                    pos: startPos + lastPos,
-                    val: content.substring(lastPos, matchPos)
+                    pos: startPos + currentPos,
+                    val: content.substring(currentPos, nextShortcodePos)
                 });
             }
             
-            // 解析 shortcode
-            const isClosing = !!match[1];
-            const name = match[2] || match[3];
-            const paramsText = match[4] || '';
-            const isInline = matchText.includes('/>')
-                || (matchText.includes('/ >'))
-                || (matchText.includes('/>}'));
+            // 尝试解析 shortcode
+            const shortcodeResult = this.parseShortcode(content.substring(nextShortcodePos));
             
-            // 解析参数，保留引号
-            const params = this.parseShortcodeParams(paramsText);
-            
-            items.push({
-                type: 'shortcode',
-                pos: startPos + matchPos,
-                val: matchText,
-                name,
-                params,
-                isClosing,
-                isInline
-            } as ShortcodeItem);
-            
-            lastPos = matchPos + matchText.length;
-        }
-        
-        // 添加剩余的内容
-        if (lastPos < content.length) {
-            items.push({
-                type: 'content',
-                pos: startPos + lastPos,
-                val: content.substring(lastPos)
-            });
+            if (shortcodeResult) {
+                // 添加解析到的 shortcode
+                items.push({
+                    type: 'shortcode',
+                    pos: startPos + nextShortcodePos,
+                    val: shortcodeResult.original,
+                    name: shortcodeResult.name,
+                    params: shortcodeResult.params,
+                    isClosing: shortcodeResult.isClosing,
+                    isInline: shortcodeResult.isInline
+                } as ShortcodeItem);
+                
+                // 更新当前位置
+                currentPos = nextShortcodePos + shortcodeResult.original.length;
+            } else {
+                // 解析失败，将 {{< 当作普通内容，继续向前
+                items.push({
+                    type: 'content',
+                    pos: startPos + nextShortcodePos,
+                    val: '{{<'
+                });
+                currentPos = nextShortcodePos + 3;
+            }
         }
     }
     
     /**
-     * 解析 shortcode 参数
-     * @param paramsText 参数文本
-     * @returns 解析后的参数数组
+     * 解析单个 shortcode
+     * @param input 输入字符串，以 {{< 开头
+     * @returns 解析结果，如果不是有效的 shortcode 则返回 null
      */
-    private static parseShortcodeParams(paramsText: string): string[] {
-        if (!paramsText.trim()) {
-            return [];
-        }
+    private static parseShortcode(input: string): {
+        original: string;
+        name: string;
+        params: string[];
+        isClosing: boolean;
+        isInline: boolean;
+    } | null {
+        // 重置正则
+        this.shortcodeStartPattern.lastIndex = 0;
         
-        const params: string[] = [];
+        // 匹配开头部分
+        const startMatch = this.shortcodeStartPattern.exec(input);
+        if (!startMatch) return null;
+        
+        const isClosing = !!startMatch[1];
+        const name = startMatch[2];
+        let pos = this.shortcodeStartPattern.lastIndex;
+        
+        // 解析参数部分和结束部分
+        let params: string[] = [];
+        let isInline = false;
         let inQuote = false;
         let quoteChar = '';
-        let param = '';
+        let currentParam = '';
+        let found = false;
         
-        // 跳过参数文本中的 '/' 字符，这是内联 shortcode 的标记，不是参数
-        if (paramsText.trim() === '/') {
-            return [];
-        }
-        
-        for (let i = 0; i < paramsText.length; i++) {
-            const char = paramsText[i];
+        while (pos < input.length) {
+            const char = input[pos];
+            const nextChar = pos + 1 < input.length ? input[pos + 1] : '';
             
-            if ((char === '"' || char === "'") && (i === 0 || paramsText[i-1] !== '\\')) {
-                if (!inQuote) {
+            if (!inQuote) {
+                // 检查是否遇到引号
+                if (char === '"' || char === "'") {
                     inQuote = true;
                     quoteChar = char;
-                    param += char; // 保留引号
-                } else if (char === quoteChar) {
-                    inQuote = false;
-                    param += char; // 保留引号
-                    if (param.trim()) {
-                        params.push(param.trim());
-                        param = '';
+                    currentParam += char;
+                }
+                // 检查是否遇到内联结束标记
+                else if (char === '/' && nextChar === '>') {
+                    isInline = true;
+                    pos += 2;
+                    // 跳过剩余的 }}}
+                    while (pos < input.length && input[pos] === '}') pos++;
+                    found = true;
+                    break;
+                }
+                // 检查是否遇到常规结束标记
+                else if (char === '>' && nextChar === '}') {
+                    pos += 2;
+                    // 跳过剩余的 }
+                    while (pos < input.length && input[pos] === '}') pos++;
+                    found = true;
+                    break;
+                }
+                // 空格表示参数之间的分隔
+                else if (char === ' ' || char === '\t') {
+                    if (currentParam.trim()) {
+                        params.push(currentParam.trim());
+                        currentParam = '';
                     }
-                } else {
-                    param += char;
                 }
-            } else if (char === ' ' && !inQuote) {
-                if (param.trim()) {
-                    params.push(param.trim());
-                    param = '';
+                else {
+                    currentParam += char;
                 }
-            } else {
-                param += char;
             }
+            else {
+                // 在引号内
+                // 检查是否遇到匹配的结束引号
+                if (char === quoteChar && input[pos - 1] !== '\\') {
+                    inQuote = false;
+                    currentParam += char;
+                    params.push(currentParam.trim());
+                    currentParam = '';
+                }
+                else {
+                    currentParam += char;
+                }
+            }
+            
+            pos++;
         }
         
-        if (param.trim()) {
-            params.push(param.trim());
+        // 添加最后一个参数（如果有）
+        if (currentParam.trim() && !isInline) {
+            params.push(currentParam.trim());
         }
         
-        return params;
+        if (!found) return null;
+        
+        return {
+            original: input.substring(0, pos),
+            name,
+            params,
+            isClosing,
+            isInline
+        };
     }
     
     /**

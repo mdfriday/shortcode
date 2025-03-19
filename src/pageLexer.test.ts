@@ -45,6 +45,21 @@ describe('PageLexer', () => {
       expect(shortcodeItem.params).toContain('src="test.jpg"');
       expect(shortcodeItem.params).toContain('alt="Test Image"');
     });
+
+    test('应该保留参数中的复杂字符', () => {
+      const content = '{{< image src="test.jpg" alt="让完播率>50% (3/3)" >}}';
+
+      const result = PageLexer.parse(content);
+
+      expect(result.items).toHaveLength(1);
+      const shortcodeItem = result.items[0] as ShortcodeItem;
+      expect(shortcodeItem.type).toBe('shortcode');
+      expect(shortcodeItem.name).toBe('image');
+
+      // 参数应该保留引号
+      expect(shortcodeItem.params).toContain('src="test.jpg"');
+      expect(shortcodeItem.params).toContain('alt="让完播率>50% (3/3)"');
+    });
     
     test('应该正确处理内联 shortcode', () => {
       const content = '{{< image src="test.jpg" />}}';
