@@ -12,6 +12,8 @@ A powerful shortcode compiler for markdown content, supporting function and temp
 - Summary divider handling
 - Customizable error handling
 - TypeScript support
+- Support Hugo/Jekyll style shortcode syntax
+- Support step rendering to solve Markdown rendering and Shortcode conflict
 
 ## Installation
 
@@ -104,6 +106,44 @@ Template shortcodes support:
 - Named and positional parameters
 - Custom data providers
 - Nested template support
+
+## Step Rendering
+
+When Markdown and Shortcode are mixed, if Markdown rendering is performed first, it may destroy the structure of Shortcode, causing Shortcode to fail to parse correctly. To solve this problem, we provide step rendering:
+
+1. The first step: First, replace Shortcode in Markdown with placeholder markers by Shortcode renderer
+2. The second step: Pass the replaced content to Markdown renderer for rendering
+3. The third step: Perform a final rendering on the rendered content of Markdown, replacing placeholder with the actual Shortcode content
+
+### Usage
+
+```javascript
+const { ShortcodeRenderer, PageRenderer } = require('@mdfriday/shortcode-compiler');
+const markdownRenderer = require('your-markdown-renderer'); // Your chosen Markdown renderer
+
+// Create Shortcode renderer
+const shortcodeRenderer = new ShortcodeRenderer();
+// Register your shortcodes...
+
+// Create page renderer
+const pageRenderer = new PageRenderer(shortcodeRenderer);
+
+// The first step: Replace Shortcode with placeholder
+const content = '# Title\n{{< shortcode >}}Content{{< /shortcode >}}';
+const stepOneResult = pageRenderer.render(content, { stepRender: true });
+
+// The second step: Markdown rendering
+const htmlContent = markdownRenderer(stepOneResult.content);
+
+// The third step: Final rendering, replace placeholder with actual content
+const finalResult = pageRenderer.finalRender(htmlContent);
+
+console.log(finalResult); // Complete correct HTML content
+```
+
+### Example
+
+See `examples/step-render-example.js` for a complete usage example.
 
 ## API
 

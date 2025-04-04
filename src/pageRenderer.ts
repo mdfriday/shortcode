@@ -22,6 +22,8 @@ export interface PageRenderOptions {
     preserveUnknownShortcodes?: boolean;
     /** 自定义错误处理函数 */
     onError?: (error: Error, shortcodeName: string) => string;
+    /** 是否启用分步渲染模式 */
+    stepRender?: boolean;
 }
 
 export class PageRenderer {
@@ -31,6 +33,8 @@ export class PageRenderer {
         showWarnings: true,
         preserveUnknownShortcodes: true
     };
+    // 存储中间步骤的渲染结果
+    private stepRenderCache: Map<string, string> = new Map();
 
     constructor(shortcodeRenderer: ShortcodeRenderer) {
         this.shortcodeRenderer = shortcodeRenderer;
@@ -205,6 +209,14 @@ export class PageRenderer {
         // 创建一个映射来存储已处理的内容
         const processedContent = new Map<string, string>();
         
+        // 清除旧的步骤渲染缓存
+        if (options.stepRender) {
+            this.stepRenderCache.clear();
+        }
+        
+        // 标记用于步骤渲染的占位符
+        let placeholderIndex = 0;
+        
         // 第二遍扫描：按照深度优先的顺序处理 shortcodes
         for (const pair of shortcodePairs) {
             const range = `${pair.start}-${pair.end}`;
@@ -221,8 +233,15 @@ export class PageRenderer {
                         const shortcodeItem = item as ShortcodeItem;
                         if (shortcodeItem.isInline || (!shortcodeItem.isClosing && !shortcodePairs.some(p => p.start === i))) {
                             // 如果是内联 shortcode 或者是没有对应闭合标签的 shortcode
-                            const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
-                            content += rendered;
+                            if (options.stepRender) {
+                                const placeholder = `_mdf_sc_${placeholderIndex++}`;
+                                const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
+                                this.stepRenderCache.set(placeholder, rendered);
+                                content += placeholder;
+                            } else {
+                                const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
+                                content += rendered;
+                            }
                             i++;
                         } else if (!shortcodeItem.isClosing) {
                             // 查找这个开始标签对应的范围
@@ -247,12 +266,20 @@ export class PageRenderer {
                 }
                 
                 // 渲染 shortcode
-                const rendered = this.shortcodeRenderer.renderShortcodeItem(pair.item, content, options);
-                processedContent.set(range, rendered);
+                let rendered;
+                if (options.stepRender) {
+                    const placeholder = `_mdf_sc_${placeholderIndex++}`;
+                    rendered = this.shortcodeRenderer.renderShortcodeItem(pair.item, content, options);
+                    this.stepRenderCache.set(placeholder, rendered);
+                    processedContent.set(range, placeholder);
+                } else {
+                    rendered = this.shortcodeRenderer.renderShortcodeItem(pair.item, content, options);
+                    processedContent.set(range, rendered);
+                }
             }
         }
         
-        // 最后一遍扫描：构建最终结果
+        // 第三遍扫描：处理所有项目
         let i = 0;
         while (i < items.length) {
             const item = items[i];
@@ -265,10 +292,19 @@ export class PageRenderer {
             
             const shortcodeItem = item as ShortcodeItem;
             
-            if (shortcodeItem.isInline || (!shortcodeItem.isClosing && !shortcodePairs.some(p => p.start === i))) {
+            if (shortcodeItem.isInline || (!shortcodeItem.isClosing && !shortcodePairs.some(p => p.item.name === shortcodeItem.name && p.start === i))) {
                 // 直接渲染内联 shortcode 或没有闭合标签的 shortcode
-                const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
-                if (rendered) {
+                if (options.stepRender) {
+                    const placeholder = `_mdf_sc_${placeholderIndex++}`;
+                    const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
+                    this.stepRenderCache.set(placeholder, rendered);
+                    result.push({
+                        type: 'content',
+                        pos: shortcodeItem.pos,
+                        val: placeholder
+                    });
+                } else {
+                    const rendered = this.shortcodeRenderer.renderShortcodeItem(shortcodeItem, undefined, options);
                     result.push({
                         type: 'content',
                         pos: shortcodeItem.pos,
@@ -344,5 +380,25 @@ export class PageRenderer {
             }
             return undefined;
         }
+    }
+
+    /**
+     * 根据第一步的渲染结果，完成最终渲染
+     * @param content 经过Markdown渲染的内容，含有占位符
+     * @returns 最终渲染后的内容
+     */
+    public finalRender(content: string): string {
+        // 没有缓存内容，直接返回原内容
+        if (this.stepRenderCache.size === 0) {
+            return content;
+        }
+        
+        // 替换所有占位符
+        let result = content;
+        for (const [placeholder, rendered] of this.stepRenderCache.entries()) {
+            result = result.replace(new RegExp(placeholder, 'g'), rendered);
+        }
+        
+        return result;
     }
 } 
