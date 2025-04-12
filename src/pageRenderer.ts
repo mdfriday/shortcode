@@ -393,12 +393,179 @@ export class PageRenderer {
             return content;
         }
         
-        // 替换所有占位符
-        let result = content;
-        for (const [placeholder, rendered] of this.stepRenderCache.entries()) {
-            result = result.replace(new RegExp(placeholder, 'g'), rendered);
+        // 预处理缓存中的嵌套占位符
+        this.processNestedInCache();
+        
+        // 使用递归方法处理嵌套占位符
+        return this.processNestedPlaceholders(content);
+    }
+
+    /**
+     * 预处理缓存中的嵌套占位符，确保缓存内容是完整渲染的
+     * @private
+     */
+    private processNestedInCache(): void {
+        // 我们需要递归处理嵌套占位符，所以我们需要从最小的占位符开始
+        // 首先找出所有的嵌套关系
+        
+        // 收集占位符映射表：记录哪些占位符包含其他占位符
+        const placeholderMap = new Map<string, Set<string>>();
+        
+        // 初始化映射表
+        for (const [placeholder, content] of this.stepRenderCache.entries()) {
+            const nestedPlaceholders = content.match(/_mdf_sc_\d+/g);
+            if (nestedPlaceholders) {
+                const uniqueNested = new Set(nestedPlaceholders);
+                placeholderMap.set(placeholder, uniqueNested);
+            }
         }
         
-        return result;
+        // 标记占位符深度（0 表示没有嵌套占位符）
+        const placeholderDepth = new Map<string, number>();
+        
+        // 计算每个占位符的深度
+        const calculateDepth = (placeholder: string, visited = new Set<string>()): number => {
+            // 防止循环引用
+            if (visited.has(placeholder)) {
+                return 0;
+            }
+            
+            visited.add(placeholder);
+            
+            // 如果已经计算过深度，直接返回
+            if (placeholderDepth.has(placeholder)) {
+                return placeholderDepth.get(placeholder)!;
+            }
+            
+            // 获取该占位符包含的所有嵌套占位符
+            const nestedPlaceholders = placeholderMap.get(placeholder);
+            
+            // 如果没有嵌套占位符，深度为0
+            if (!nestedPlaceholders || nestedPlaceholders.size === 0) {
+                placeholderDepth.set(placeholder, 0);
+                return 0;
+            }
+            
+            // 计算所有嵌套占位符的最大深度
+            let maxDepth = 0;
+            for (const nestedPlaceholder of nestedPlaceholders) {
+                const depth = calculateDepth(nestedPlaceholder, new Set(visited));
+                maxDepth = Math.max(maxDepth, depth);
+            }
+            
+            // 自身深度为最大嵌套深度 + 1
+            const depth = maxDepth + 1;
+            placeholderDepth.set(placeholder, depth);
+            return depth;
+        };
+        
+        // 计算所有占位符的深度
+        for (const placeholder of this.stepRenderCache.keys()) {
+            if (!placeholderDepth.has(placeholder)) {
+                calculateDepth(placeholder);
+            }
+        }
+        
+        // 按深度排序占位符（深度较小的先处理）
+        const sortedPlaceholders = Array.from(this.stepRenderCache.keys()).sort((a, b) => 
+            (placeholderDepth.get(a) || 0) - (placeholderDepth.get(b) || 0)
+        );
+        
+        // 从底层开始，逐层处理占位符
+        const processedCache = new Map<string, string>();
+        
+        // 处理各个占位符
+        for (const placeholder of sortedPlaceholders) {
+            const content = this.stepRenderCache.get(placeholder)!;
+            
+            // 检查内容中是否有占位符
+            const nestedPlaceholders = content.match(/_mdf_sc_\d+/g);
+            
+            if (!nestedPlaceholders) {
+                // 没有嵌套占位符，直接保存
+                processedCache.set(placeholder, content);
+                continue;
+            }
+            
+            // 处理嵌套占位符
+            let processedContent = content;
+            
+            // 替换占位符
+            for (const nestedPlaceholder of new Set(nestedPlaceholders)) {
+                // 使用已处理的缓存内容（如果有的话）或原始缓存内容
+                const replacementContent = processedCache.has(nestedPlaceholder) 
+                    ? processedCache.get(nestedPlaceholder)!
+                    : this.stepRenderCache.get(nestedPlaceholder)!;
+                
+                // 替换占位符
+                processedContent = processedContent.replace(
+                    new RegExp(nestedPlaceholder, 'g'),
+                    replacementContent
+                );
+            }
+            
+            // 保存处理后的内容
+            processedCache.set(placeholder, processedContent);
+        }
+        
+        // 更新原始缓存
+        this.stepRenderCache = processedCache;
+    }
+
+    /**
+     * 递归处理内容中的嵌套占位符
+     * @param content 包含占位符的内容
+     * @returns 处理后的内容，所有占位符都被替换
+     * @private
+     */
+    private processNestedPlaceholders(content: string): string {
+        // 检查内容中是否还有占位符
+        const placeholderRegex = /_mdf_sc_\d+/g;
+        const placeholders = content.match(placeholderRegex);
+        
+        if (!placeholders) {
+            return content; // 没有占位符，直接返回
+        }
+        
+        // 替换所有占位符
+        let processedContent = content;
+        for (const placeholder of placeholders) {
+            if (this.stepRenderCache.has(placeholder)) {
+                // 获取缓存的内容（已经处理过嵌套占位符）
+                const nestedContent = this.stepRenderCache.get(placeholder)!;
+                processedContent = processedContent.replace(new RegExp(placeholder, 'g'), nestedContent);
+            }
+        }
+        
+        return processedContent;
+    }
+
+    /**
+     * 获取指定占位符的预处理后的缓存内容
+     * 这个方法会先确保缓存中的内容都已经预处理好嵌套占位符
+     * @param placeholder 占位符
+     * @returns 预处理后的内容，如果占位符不存在则返回null
+     */
+    public getProcessedCacheContent(placeholder: string): string | null {
+        // 预处理缓存
+        this.processNestedInCache();
+        
+        // 返回指定占位符的缓存内容
+        return this.stepRenderCache.has(placeholder) 
+            ? this.stepRenderCache.get(placeholder)! 
+            : null;
+    }
+
+    /**
+     * 获取当前的步骤渲染缓存
+     * 用于测试和调试目的
+     * @returns 预处理后的缓存
+     */
+    public getStepRenderCache(): Map<string, string> {
+        // 预处理缓存
+        this.processNestedInCache();
+        
+        // 返回缓存
+        return this.stepRenderCache;
     }
 } 
