@@ -5,6 +5,10 @@
 
 import { PageLexer, PageLexerResult, PageItem, ShortcodeItem } from './pageLexer';
 import { ShortcodeRenderer } from './shortcodeRenderer';
+import { Marked } from "marked";
+import { markedHighlight } from "marked-highlight";
+import hljs from "highlight.js";
+import markedKatex from "marked-katex-extension";
 
 export interface PageRenderResult {
     content: string;
@@ -24,20 +28,38 @@ export interface PageRenderOptions {
     onError?: (error: Error, shortcodeName: string) => string;
     /** 是否启用分步渲染模式 */
     stepRender?: boolean;
+    markedContent?: boolean;
 }
 
 export class PageRenderer {
+    private markedInstance: Marked;
     private shortcodeRenderer: ShortcodeRenderer;
     private defaultOptions: PageRenderOptions = {
         preserveFrontmatter: false,
         showWarnings: true,
-        preserveUnknownShortcodes: true
+        preserveUnknownShortcodes: true,
+        markedContent: false
     };
     // 存储中间步骤的渲染结果
     private stepRenderCache: Map<string, string> = new Map();
 
     constructor(shortcodeRenderer: ShortcodeRenderer) {
         this.shortcodeRenderer = shortcodeRenderer;
+        this.markedInstance = new Marked(
+            markedHighlight({
+                emptyLangClass: "hljs",
+                langPrefix: "hljs language-",
+                highlight(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : "plaintext";
+
+                    return hljs.highlight(code, { language }).value;
+                },
+            }),
+            markedKatex({}),
+            {
+                breaks: true,
+            },
+        );
     }
 
     /**
@@ -260,7 +282,11 @@ export class PageRenderer {
                             i++;
                         }
                     } else {
-                        content += item.val;
+                        let itemVal: string | Promise<string> = item.val;
+                        if (item.type === 'content' && options.markedContent) {
+                            itemVal = this.markedInstance.parse(itemVal);
+                        }
+                        content += itemVal;
                         i++;
                     }
                 }
