@@ -624,4 +624,145 @@ And this is a {{< profile name="Jane" age="28" >}} in the content.`;
     
     expect(result.content.replace(/\s+/g, '')).toContain(expectedStructure);
   });
+});
+
+describe('Markdown 内容处理', () => {
+  let shortcodeRenderer: ShortcodeRenderer;
+  let pageRenderer: PageRenderer;
+
+  beforeEach(() => {
+    // 创建一个 ShortcodeRenderer 实例
+    shortcodeRenderer = new ShortcodeRenderer();
+    
+    // 注册测试用的 shortcodes
+    shortcodeRenderer.registerShortcodes({
+      box: (params, content) => `<div class="box">${content || ''}</div>`,
+      outer: (params, content) => `<div class="outer">${content || ''}</div>`,
+      inner: (params, content) => `<div class="inner">${content || ''}</div>`,
+      card: (params, content) => `<div class="card">${content || ''}</div>`,
+      highlight: (params, content) => `<pre><code>${content || ''}</code></pre>`,
+      list: (params, content) => `<ul>${content || ''}</ul>`,
+      level1: (params, content) => `<div class="level1">${content || ''}</div>`,
+      level2: (params, content) => `<div class="level2">${content || ''}</div>`,
+      level3: (params, content) => `<div class="level3">${content || ''}</div>`,
+      inline: (params) => {
+        const text = params.find(p => p.startsWith('text='))?.replace(/^text="|"$/g, '') || '';
+        return `<span class="inline">${text}</span>`;
+      },
+      code: (params, content) => `<pre><code>${content || ''}</code></pre>`
+    });
+    
+    // 创建 PageRenderer 实例
+    pageRenderer = new PageRenderer(shortcodeRenderer);
+  });
+
+  test('shortcode 内部的 Markdown 内容渲染', () => {
+    const content = '{{< box >}}This is **bold** text{{< /box >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    expect(result.content).toBe('<div class="box"><p>This is <strong>bold</strong> text</p>\n</div>');
+  });
+
+  test('不启用 markedContent 选项时不渲染 Markdown', () => {
+    const content = '{{< box >}}This is **bold** text{{< /box >}}';
+    const result = pageRenderer.render(content, { markedContent: false });
+    
+    expect(result.content).toBe('<div class="box">This is **bold** text</div>');
+  });
+
+  test('外部 Markdown 不应被渲染，只处理 shortcode 内部', () => {
+    const content = 'This is **bold** text with {{< box >}}inner **bold** content{{< /box >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    // 外部的 "This is **bold** text with" 不应被渲染为 Markdown
+    // 只有内部的 "inner **bold** content" 应被渲染
+    expect(result.content).toBe('This is **bold** text with <div class="box"><p>inner <strong>bold</strong> content</p>\n</div>');
+  });
+
+  test('嵌套 shortcode 中的 Markdown 内容渲染', () => {
+    const content = '{{< outer >}}**important** {{< inner >}}*nested* content{{< /inner >}}{{< /outer >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    expect(result.content).toBe('<div class="outer"><p><strong>important</strong> </p>\n<div class="inner"><p><em>nested</em> content</p>\n</div></div>');
+  });
+
+  test('混合内容 - Markdown、HTML 和 shortcode', () => {
+    const content = '{{< card >}}## Heading\n\n<span>HTML content</span> and {{< highlight >}}code block{{< /highlight >}}{{< /card >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    // 使用部分匹配而不是精确字符串匹配
+    expect(result.content).toContain('<div class="card">');
+    expect(result.content).toContain('<h2>Heading</h2>');
+    expect(result.content).toContain('<span>HTML content</span>');
+    expect(result.content).toContain('<pre><code>');
+    expect(result.content).toContain('code block');
+  });
+
+  test('列表和链接的 Markdown 渲染', () => {
+    const content = '{{< list >}}* Item 1\n* [Link](https://example.com)\n* **Bold item**{{< /list >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    // 使用部分匹配
+    expect(result.content).toContain('<ul>');
+    expect(result.content).toContain('<li>Item 1</li>');
+    expect(result.content).toContain('<li><a href="https://example.com">Link</a></li>');
+    expect(result.content).toContain('<li><strong>Bold item</strong></li>');
+    expect(result.content).toContain('</ul>');
+  });
+
+  test('多层嵌套 shortcode 的 Markdown 处理', () => {
+    const content = '{{< level1 >}}# Title\n\n{{< level2 >}}## Subtitle\n\n{{< level3 >}}### Nested\n\n* List item{{< /level3 >}}{{< /level2 >}}{{< /level1 >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+
+    // 使用部分匹配而不是完整字符串匹配
+    expect(result.content).toContain('<div class="level1">');
+    expect(result.content).toContain('<h1>Title</h1>');
+    expect(result.content).toContain('<div class="level2">');
+    expect(result.content).toContain('<h2>Subtitle</h2>');
+    expect(result.content).toContain('<div class="level3">');
+    expect(result.content).toContain('<h3>Nested</h3>');
+    expect(result.content).toContain('<li>List item</li>');
+  });
+
+  test('shortcode 嵌套和文本混合，仅处理 shortcode 内部', () => {
+    const content = 'Before **not bold** {{< outer >}}**Bold** text {{< inner >}}*italic*{{< /inner >}} and normal text{{< /outer >}} After **not bold**';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    // 外部的 Markdown 不应被处理
+    expect(result.content).toBe('Before **not bold** <div class="outer"><p><strong>Bold</strong> text </p>\n<div class="inner"><p><em>italic</em></p>\n</div><p> and normal text</p>\n</div> After **not bold**');
+  });
+
+  test('inline shortcode 周围的 Markdown 不应被处理', () => {
+    const content = 'This paragraph has {{< inline text="inline shortcode" >}} and **should not be bold**.';
+    const result = pageRenderer.render(content, { markedContent: true });
+    
+    expect(result.content).toBe('This paragraph has <span class="inline">inline shortcode</span> and **should not be bold**.');
+  });
+
+  test('代码块内部的 Markdown 应被处理，但可以配置跳过', () => {
+    // 注册一个特殊的 code shortcode，不对内容进行 Markdown 处理
+    shortcodeRenderer.registerShortcode('raw-code', (params, content) => {
+      // 在实际实现中，这应该由 shortcode renderer 决定是否应用 Markdown
+      // 这里仅做测试展示，我们直接返回未经处理的内容
+      return `<pre><code>${content || ''}</code></pre>`;
+    });
+    
+    const content = '{{< code >}}# This should be a heading\n**This should be bold**\n```javascript\n' +
+        'const highlight = "code";\n' +
+        '```{{< /code >}}';
+    const result = pageRenderer.render(content, { markedContent: true });
+
+    // 默认情况下，code 内部的内容也会被处理为 Markdown
+    expect(result.content).toContain('<pre><code>');
+    expect(result.content).toContain('<h1>This should be a heading</h1>');
+    expect(result.content).toContain('<strong>This should be bold</strong>');
+    expect(result.content).toContain('<pre><code class="hljs language-javascript">');
+    
+    // 现在使用特殊的 raw-code shortcode，它直接返回原始内容
+    const rawContent = '{{< raw-code >}}# This should NOT be a heading\n**This should NOT be bold**{{< /raw-code >}}';
+    const rawResult = pageRenderer.render(rawContent, { markedContent: false });
+    
+    // 由于 raw-code 直接返回原始内容，Markdown 处理由 shortcode 实现控制
+    expect(rawResult.content).toBe('<pre><code># This should NOT be a heading\n**This should NOT be bold**</code></pre>');
+  });
 }); 
