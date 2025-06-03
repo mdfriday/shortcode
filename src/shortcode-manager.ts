@@ -1,4 +1,4 @@
-import { ShortcodeRenderer } from '@mdfriday/shortcode-compiler';
+import { ShortcodeRenderer } from './compiler';
 
 // Default function map used by most shortcodes
 const defaultFuncMap = new Map<string, (...args: any[]) => any>([
