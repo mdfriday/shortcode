@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>丰田A3模板</title>
+    <style>
+        .mdf-card {
+            font-family: "SimSun", "Microsoft YaHei", sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: white;
+        }
+
+        .mdf-card .container {
+            width: 100%;
+            border: 2px solid black;
+            margin: 0 auto;
+        }
+
+        .mdf-card .row {
+            display: flex;
+            border-bottom: 1px solid #000;
+        }
+
+        .mdf-card .row:last-child {
+            border-bottom: none;
+        }
+
+        .mdf-card .label {
+            width: 80px;
+            padding: 10px;
+            border-right: 1px solid #000;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mdf-card .content {
+            flex: 1;
+            padding: 10px;
+            line-height: 1.5;
+        }
+
+        /* 背景颜色 */
+        .mdf-card .theme .content {
+            background-color: white;
+        }
+
+        .mdf-card .background .content {
+            background-color: #ffcece;
+        }
+
+        .mdf-card .current .content {
+            background-color: #b3d9cd;
+        }
+
+        .mdf-card .goal .content {
+            background-color: #b3d9d9;
+        }
+
+        .mdf-card .question .content {
+            background-color: #ffcfa8;
+        }
+
+        .mdf-card .solution .content {
+            background-color: #f5d142;
+        }
+
+        .mdf-card .plan .content {
+            background-color: #c1e7c7;
+        }
+    </style>
+</head>
+<body>
+<div class="mdf-card">
+    <div class="container">
+        <div class="row theme">
+            <div class="label">主题：</div>
+            <div class="content">（举例）2020.04.16<br>新推出的产品如何获得更多新用户？</div>
+        </div>
+
+        <div class="row background">
+            <div class="label">背景：</div>
+            <div class="content">新成立的事业部研发的新产品需要大力投放，获取更多新用户。</div>
+        </div>
+
+        <div class="row current">
+            <div class="label">现状：</div>
+            <div class="content">目前处在运营前期，需要快速获取大量新用户，提高事业部营收</div>
+        </div>
+
+        <div class="row goal">
+            <div class="label">目标：</div>
+            <div class="content">完成首月10w新用户的增长。</div>
+        </div>
+
+        <div class="row question">
+            <div class="label">课题：</div>
+            <div class="content">1、如何从内部获取新用户？<br>2、如何从外部拉新？</div>
+        </div>
+
+        <div class="row solution">
+            <div class="label">解决<br>方案：</div>
+            <div class="content">内拉新：<br>内部流量的重复利用：比如藏经阁、其他事业部已有用户、现有自媒体矩阵号投放<br><br>外拉新：投放/各BU投放的名单分级入库/转介绍</div>
+        </div>
+
+        <div class="row plan">
+            <div class="label">计划：</div>
+            <div class="content">1、拉新<br>弱关系的拉新：打卡、内容分享<br>强关系的拉新：转介绍<br>2.营销玩法<br>转介绍活动/分层营销：对不同的用户，不同的活动唤醒<br>拼团：转介绍拼团，阶梯拼团<br>3.促转化：优惠券/双11抽奖必中/满减</div>
+        </div>
+    </div>
+</div>
+</body>
+</html> 

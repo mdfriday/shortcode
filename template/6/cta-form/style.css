@@ -1,0 +1,363 @@
+.cta-form {
+    --theme-color: var(--theme-electric);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 600px;
+    min-width: 320px;
+    height: auto;
+    align-items: center;
+    padding: var(--spacing-2xl);
+    position: relative;
+    background: linear-gradient(135deg, var(--theme-color) 0%, rgba(0, 0, 0, 0.8) 100%);
+    margin: 0 auto;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--drop-shadow-heavy);
+    -webkit-font-smoothing: antialiased;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Theme variations */
+.cta-form[data-theme="electric"] {
+    --theme-color: var(--theme-electric);
+}
+
+.cta-form[data-theme="fire"] {
+    --theme-color: var(--theme-fire);
+}
+
+.cta-form[data-theme="water"] {
+    --theme-color: var(--theme-water);
+}
+
+.cta-form[data-theme="grass"] {
+    --theme-color: var(--theme-grass);
+}
+
+.cta-form[data-theme="psychic"] {
+    --theme-color: var(--theme-psychic);
+}
+
+.cta-form[data-theme="ice"] {
+    --theme-color: var(--theme-ice);
+}
+
+.cta-form[data-theme="dragon"] {
+    --theme-color: var(--theme-dragon);
+}
+
+.cta-form[data-theme="dark"] {
+    --theme-color: var(--theme-dark);
+}
+
+.cta-form[data-theme="steel"] {
+    --theme-color: var(--theme-steel);
+}
+
+.cta-form[data-theme="fairy"] {
+    --theme-color: var(--theme-fairy);
+}
+
+.cta-form[data-theme="custom"] {
+    --theme-color: var(--custom-theme-color, var(--theme-electric));
+}
+
+.cta-form * {
+    -webkit-font-smoothing: antialiased;
+    box-sizing: border-box;
+}
+
+/* Background decoration */
+.cta-form::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Content container */
+.cta-form .content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    width: 100%;
+    max-width: 380px;
+}
+
+/* Title */
+.cta-form .title {
+    font-family: var(--header-headline-font-family);
+    font-weight: var(--header-headline-font-weight);
+    font-size: var(--header-headline-font-size);
+    letter-spacing: var(--header-headline-letter-spacing);
+    line-height: var(--header-headline-line-height);
+    font-style: var(--header-headline-font-style);
+    color: var(--grayscalewhite);
+    margin-bottom: var(--spacing-md);
+    text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Description */
+.cta-form .description {
+    font-family: var(--header-subtitle-font-family);
+    font-weight: var(--header-subtitle-font-weight);
+    font-size: var(--header-subtitle-font-size);
+    letter-spacing: var(--header-subtitle-letter-spacing);
+    line-height: var(--header-subtitle-line-height);
+    font-style: var(--header-subtitle-font-style);
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: var(--spacing-xl);
+    opacity: 0.95;
+}
+
+/* Form container */
+.cta-form .form-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    width: 100%;
+    max-width: 400px;
+    background-color: var(--grayscalewhite);
+    border-radius: var(--border-radius-medium);
+    padding: var(--spacing-xs);
+    box-shadow: var(--drop-shadow-medium);
+    transition: all 0.3s ease;
+    container-type: inline-size;
+}
+
+.cta-form .form-container:focus-within {
+    box-shadow: var(--drop-shadow-heavy);
+    transform: translateY(-2px);
+}
+
+/* Email input */
+.cta-form .email-input {
+    flex: 1 1 180px;
+    min-width: 180px;
+    border: none;
+    outline: none;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-family: var(--body-font-family);
+    font-weight: var(--body-font-weight);
+    font-size: var(--body-font-size);
+    letter-spacing: var(--body-letter-spacing);
+    line-height: var(--body-line-height);
+    color: var(--grayscaledark);
+    background-color: transparent;
+    border-radius: var(--border-radius-small);
+    transition: all 0.2s ease;
+}
+
+.cta-form .email-input::placeholder {
+    color: var(--grayscalemedium);
+    opacity: 0.8;
+}
+
+.cta-form .email-input:focus {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Subscribe button */
+.cta-form .subscribe-button {
+    flex: 1 1 auto;
+    min-width: 100px;
+    border: none;
+    outline: none;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: var(--theme-color);
+    color: var(--grayscalewhite);
+    font-family: var(--button-font-family);
+    font-weight: var(--button-font-weight);
+    font-size: var(--button-font-size);
+    letter-spacing: var(--button-letter-spacing);
+    line-height: var(--button-line-height);
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+/* When container is too narrow, button takes full width */
+@container (max-width: 300px) {
+    .cta-form .subscribe-button {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    
+    .cta-form .email-input {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}
+
+/* Fallback for browsers without container queries */
+@media screen and (max-width: 340px) {
+    .cta-form .subscribe-button {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}
+
+.cta-form .subscribe-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.cta-form .subscribe-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1);
+}
+
+.cta-form .subscribe-button:hover::before {
+    left: 100%;
+}
+
+.cta-form .subscribe-button:active {
+    transform: translateY(0);
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Floating particles decoration */
+.cta-form .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: float 6s ease-in-out infinite;
+}
+
+.cta-form .particle:nth-child(1) {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.cta-form .particle:nth-child(2) {
+    top: 60%;
+    left: 85%;
+    animation-delay: 2s;
+}
+
+.cta-form .particle:nth-child(3) {
+    top: 80%;
+    left: 20%;
+    animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-20px) rotate(180deg);
+        opacity: 0.8;
+    }
+}
+
+/* Responsive design */
+@media screen and (max-width: 480px) {
+    .cta-form {
+        padding: var(--spacing-lg);
+        margin: var(--spacing-md);
+    }
+    
+    .cta-form .title {
+        font-size: 24px;
+        line-height: 32px;
+    }
+    
+    .cta-form .description {
+        font-size: 14px;
+        line-height: 20px;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .cta-form .form-container {
+        flex-direction: column;
+        padding: 0;
+        gap: 0;
+        border-radius: var(--border-radius-medium);
+        overflow: hidden;
+        justify-content: stretch;
+    }
+    
+    .cta-form .email-input {
+        text-align: center;
+        flex: 1 1 100%;
+        width: 100%;
+        margin: 0;
+        padding: var(--spacing-md);
+        border-radius: 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .cta-form .subscribe-button {
+        flex: 1 1 100%;
+        width: 100%;
+        text-align: center;
+        margin: 0;
+        padding: var(--spacing-md);
+        border-radius: 0;
+    }
+}
+
+@media screen and (max-width: 320px) {
+    .cta-form {
+        padding: var(--spacing-md);
+    }
+    
+    .cta-form .title {
+        font-size: 20px;
+        line-height: 28px;
+    }
+}
+
+/* Handle button wrapping on very narrow containers */
+@media screen and (max-width: 400px) {
+    .cta-form .form-container {
+        max-width: 300px;
+        padding: 0;
+        gap: 0;
+        border-radius: var(--border-radius-medium);
+        overflow: hidden;
+        justify-content: stretch;
+    }
+    
+    .cta-form .email-input {
+        flex: 1 1 100%;
+        width: 100%;
+        margin: 0;
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .cta-form .subscribe-button {
+        flex: 1 1 100%;
+        width: 100%;
+        text-align: center;
+        margin: 0;
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: 0;
+    }
+} 

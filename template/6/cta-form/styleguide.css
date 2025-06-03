@@ -1,0 +1,69 @@
+:root {
+    /* Base colors */
+    --grayscaledark: rgba(29, 29, 29, 1);
+    --grayscalemedium: rgba(102, 102, 102, 1);
+    --grayscalelight: rgba(224, 224, 224, 1);
+    --grayscalebackground: rgba(239, 239, 239, 1);
+    --grayscalewhite: rgba(255, 255, 255, 1);
+    --grayscalewireframe: rgba(184, 184, 184, 1);
+    
+    /* Theme colors - 10 predefined themes */
+    --theme-electric: rgba(249, 207, 48, 1);
+    --theme-fire: rgba(245, 125, 49, 1);
+    --theme-water: rgba(100, 147, 235, 1);
+    --theme-grass: rgba(116, 203, 72, 1);
+    --theme-psychic: rgba(251, 85, 132, 1);
+    --theme-ice: rgba(154, 214, 223, 1);
+    --theme-dragon: rgba(112, 55, 255, 1);
+    --theme-dark: rgba(117, 87, 76, 1);
+    --theme-steel: rgba(183, 185, 208, 1);
+    --theme-fairy: rgba(230, 158, 172, 1);
+    
+    /* Typography */
+    --header-headline-font-family: "Poppins", Helvetica;
+    --header-headline-font-weight: 700;
+    --header-headline-font-size: 32px;
+    --header-headline-letter-spacing: -0.5px;
+    --header-headline-line-height: 40px;
+    --header-headline-font-style: normal;
+    
+    --header-subtitle-font-family: "Poppins", Helvetica;
+    --header-subtitle-font-weight: 400;
+    --header-subtitle-font-size: 16px;
+    --header-subtitle-letter-spacing: 0px;
+    --header-subtitle-line-height: 24px;
+    --header-subtitle-font-style: normal;
+    
+    --body-font-family: "Poppins", Helvetica;
+    --body-font-weight: 400;
+    --body-font-size: 14px;
+    --body-letter-spacing: 0px;
+    --body-line-height: 20px;
+    --body-font-style: normal;
+    
+    --button-font-family: "Poppins", Helvetica;
+    --button-font-weight: 600;
+    --button-font-size: 14px;
+    --button-letter-spacing: 0px;
+    --button-line-height: 20px;
+    --button-font-style: normal;
+    
+    /* Shadows */
+    --drop-shadow-light: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    --drop-shadow-medium: 0px 4px 16px rgba(0, 0, 0, 0.15);
+    --drop-shadow-heavy: 0px 8px 32px rgba(0, 0, 0, 0.2);
+    
+    /* Border radius */
+    --border-radius-small: 8px;
+    --border-radius-medium: 12px;
+    --border-radius-large: 16px;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+    --spacing-3xl: 64px;
+} 

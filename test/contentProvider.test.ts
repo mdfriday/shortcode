@@ -1,5 +1,5 @@
-import { ContentProvider, ContentProviderOptions, PageContent } from '../src/contentProvider';
-import { ShortcodeRenderer } from '../src/shortcodeRenderer';
+import { ContentProvider, ContentProviderOptions, PageContent } from '../src/compiler/contentProvider';
+import { ShortcodeRenderer } from '../src/compiler/shortcodeRenderer';
 
 /**
  * ContentProvider 单元测试

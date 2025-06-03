@@ -1,4 +1,4 @@
-import { ShortcodeRenderer, PageRenderer } from '../src';
+import { ShortcodeRenderer, PageRenderer } from '../src/compiler';
 
 describe('Step Rendering for Nested Shortcodes', () => {
   let shortcodeRenderer: ShortcodeRenderer;

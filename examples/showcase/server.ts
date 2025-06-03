@@ -1,7 +1,7 @@
 import express from 'express';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { PageRenderer } from '../../src/pageRenderer';
+import { PageRenderer } from '../../src/compiler/pageRenderer';
 import { shortcodeRenderer, lightTheme } from '../component-system';
 
 const app = express();

@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🏗️ 基础令牌层：只扩展 Tailwind 没有的 */
+:root {
+    /* 字体族变量 */
+    --font-sans-default: theme('fontFamily.sans');
+    --font-note: theme('fontFamily.note');
+    --font-newspaper: theme('fontFamily.newspaper');
+    --font-mono-code: theme('fontFamily.mono-code');
+
+    /* 品牌特色颜色 - Tailwind 调色板没有的 */
+    --brand-coral: #ff6b6b;
+    --brand-sage: #87a96b;
+    --brand-cream: #fdf6e3;
+    --brand-teal: #4ecdc4;
+
+    /* 传统报纸色值 - 补充 Tailwind 灰色系的空隙 */
+    --gray-150: #f5f5f5;  /* 介于 gray-100 和 gray-200 之间 */
+    --gray-350: #c0c0c0;  /* 介于 gray-300 和 gray-400 之间 */
+    --navy-600: #006699;  /* 深蓝色，Tailwind 没有的色值 */
+    --pink-550: #d6336c;  /* 特定的粉色调 */
+}
+
+/* ===== 语义设计令牌层 (基于 Tailwind) ===== */
+
+/* BASE 主题 - 使用 Tailwind 蓝色系 */
+.theme-base {
+    /* Light 模式 - 基于 Tailwind 蓝色和灰色令牌 */
+    --background: theme('colors.white');
+    --foreground: theme('colors.slate.900');
+    --primary: theme('colors.blue.500');
+    --primary-foreground: theme('colors.white');
+    --secondary: theme('colors.slate.100');
+    --secondary-foreground: theme('colors.slate.900');
+    --accent: theme('colors.slate.100');
+    --accent-foreground: theme('colors.slate.900');
+    --surface: theme('colors.white');
+    --surface-foreground: theme('colors.slate.900');
+    --muted: theme('colors.slate.100');
+    --muted-foreground: theme('colors.slate.600');
+    --border: theme('colors.slate.200');
+    --input: theme('colors.slate.200');
+    --ring: theme('colors.blue.500');
+    --destructive: theme('colors.red.500');
+    --destructive-foreground: theme('colors.white');
+    --warning: theme('colors.amber.500');
+    --warning-foreground: theme('colors.white');
+    --success: theme('colors.green.500');
+    --success-foreground: theme('colors.white');
+    --shadow: theme('boxShadow.md');
+    --gradient: linear-gradient(135deg, theme('colors.blue.500'), theme('colors.blue.700'));
+}
+
+.theme-base.dark,
+.theme-base[data-mode="dark"] {
+    /* Dark 模式 - 基于 Tailwind 暗色令牌 */
+    --background: theme('colors.slate.900');
+    --foreground: theme('colors.slate.50');
+    --primary: theme('colors.blue.400');
+    --primary-foreground: theme('colors.white');
+    --secondary: theme('colors.slate.800');
+    --secondary-foreground: theme('colors.slate.50');
+    --accent: theme('colors.blue.600');
+    --accent-foreground: theme('colors.white');
+    --surface: theme('colors.slate.800');
+    --surface-foreground: theme('colors.slate.50');
+    --muted: theme('colors.slate.700');
+    --muted-foreground: theme('colors.slate.400');
+    --border: theme('colors.slate.700');
+    --input: theme('colors.slate.700');
+    --ring: theme('colors.blue.400');
+    --destructive: theme('colors.red.500');
+    --destructive-foreground: theme('colors.white');
+    --warning: theme('colors.amber.500');
+    --warning-foreground: theme('colors.white');
+    --success: theme('colors.green.500');
+    --success-foreground: theme('colors.white');
+    --shadow: theme('boxShadow.lg');
+    --gradient: linear-gradient(135deg, theme('colors.blue.400'), theme('colors.blue.600'));
+}

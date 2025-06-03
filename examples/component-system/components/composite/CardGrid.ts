@@ -1,4 +1,4 @@
-import { ShortcodeRenderer } from '../../../../src/shortcodeRenderer';
+import { ShortcodeRenderer } from '../../../../src/compiler/shortcodeRenderer';
 import { StyleAdapter } from '../../styles/types';
 
 export function registerCardGridShortcode(renderer: ShortcodeRenderer, styleAdapter: StyleAdapter) {

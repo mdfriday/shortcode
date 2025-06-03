@@ -1,8 +1,8 @@
 import express from 'express';
-import { ShortcodeRenderer } from '../../src/shortcodeRenderer';
+import { ShortcodeRenderer } from '../../src/compiler/shortcodeRenderer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { PageRenderer } from '../../src/pageRenderer';
+import { PageRenderer } from '../../src/compiler/pageRenderer';
 
 const app = express();
 const port = 3000;

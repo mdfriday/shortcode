@@ -2,8 +2,8 @@
  * 分步渲染测试
  */
 
-import { ShortcodeRenderer } from '../src/shortcodeRenderer';
-import { PageRenderer } from '../src/pageRenderer';
+import { ShortcodeRenderer } from '../src/compiler/shortcodeRenderer';
+import { PageRenderer } from '../src/compiler/pageRenderer';
 
 describe('Step Rendering', () => {
     let shortcodeRenderer: ShortcodeRenderer;

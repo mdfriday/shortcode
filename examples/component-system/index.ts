@@ -1,4 +1,4 @@
-import { ShortcodeRenderer } from '../../src/shortcodeRenderer';
+import { ShortcodeRenderer } from '../../src/compiler/shortcodeRenderer';
 import { lightTheme } from './styles/themes/light';
 import { registerSectionShortcode } from './components/layout/Section';
 import { registerContainerShortcode } from './components/layout/Container';

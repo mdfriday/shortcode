@@ -1,34 +1,41 @@
-/**
- * Main entry point for the shortcode compiler
- */
+import { Shortcode } from "./shortcode";
+import { ShortcodeManager, ShortcodeMetadata, ShortcodeTemplateOptions } from "./shortcode-manager";
 
-// 导入您的TS包
-// 例如: import { someFunction } from 'your-ts-package';
+// Named exports for ES modules
+export { Shortcode, ShortcodeManager, ShortcodeMetadata, ShortcodeTemplateOptions };
 
-export { ShortcodeRenderer } from './shortcodeRenderer';
-export type { Shortcode, RenderOptions } from './shortcodeRenderer';
+// Default export for better CommonJS compatibility
+// Create a complete export object with all exported items
+const defaultExport = {
+  Shortcode,
+  ShortcodeManager,
+  ShortcodeMetadata: {} as ShortcodeMetadata
+};
 
-export { ContentProvider } from './contentProvider';
-export type { ContentProviderOptions, PageContent } from './contentProvider';
-
-export { PageLexer } from './pageLexer';
-export type { PageLexerResult, PageItem, ShortcodeItem } from './pageLexer';
-
-export { PageRenderer } from './pageRenderer';
-export type { PageRenderResult, PageRenderOptions } from './pageRenderer';
-
-/**
- * 主函数，用于测试您的TS包
- */
-export function main(): void {
-  console.log('TS Package Testing Project');
+// Create a helper function to ensure backward compatibility
+// This approach avoids hardcoding specific method names
+function ensureBackwardCompatibility() {
+  // Detect if Shortcode prototype has been extended with new methods
+  // that are not reflected in the default export
+  const shortcodePrototypeMethods = Object.getOwnPropertyNames(Shortcode.prototype)
+    .filter(method => typeof (Shortcode.prototype as any)[method] === 'function')
+    .filter(method => method !== 'constructor');
   
-  // 在这里使用您的TS包
-  // 例如: const result = someFunction();
-  // console.log('Result:', result);
+  // Keep the default export up-to-date with any prototype extensions
+  shortcodePrototypeMethods.forEach(method => {
+    if (!(method in defaultExport)) {
+      Object.defineProperty(defaultExport, method, {
+        enumerable: true,
+        configurable: true,
+        get: function() {
+          return (Shortcode.prototype as any)[method];
+        }
+      });
+    }
+  });
 }
 
-// 如果直接运行此文件，则执行main函数
-if (require.main === module) {
-  main();
-} 
+// Run the compatibility check
+ensureBackwardCompatibility();
+
+export default defaultExport;

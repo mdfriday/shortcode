@@ -1,4 +1,4 @@
-import { ShortcodeRenderer } from '../../../../src/shortcodeRenderer';
+import { ShortcodeRenderer } from '../../../../src/compiler/shortcodeRenderer';
 import { StyleComposer } from '../../styles/utils/composer';
 import { Theme, ComponentSize, ComponentVariant, ComponentState } from '../../styles/utils/types';
 

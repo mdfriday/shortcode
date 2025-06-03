@@ -1,6 +1,6 @@
 {
-  "name": "@mdfriday/shortcode-compiler",
-  "version": "0.2.6",
+  "name": "@mdfriday/shortcode",
+  "version": "0.3.0",
   "description": "A shortcode compiler for markdown content, supporting function and template shortcodes, nested shortcodes and frontmatter",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,8 +11,11 @@
   ],
   "scripts": {
     "build": "tsc",
-    "start": "ts-node src/index.ts",
-    "dev": "ts-node-dev --respawn src/index.ts",
+    "build-css": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css",
+    "build-css:watch": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css --watch",
+    "build-css:prod": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css --minify",
+    "start": "ts-node src/compiler/index.ts",
+    "dev": "ts-node-dev --respawn src/compiler/index.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "clean": "rimraf dist",
@@ -31,12 +34,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sunwei/mdfriday.git"
+    "url": "git+https://github.com/mdfriday/shortcode.git"
   },
   "bugs": {
-    "url": "https://github.com/sunwei/mdfriday/issues"
+    "url": "https://github.com/mdfriday/shortcode/issues"
   },
-  "homepage": "https://github.com/sunwei/mdfriday#readme",
+  "homepage": "https://github.com/mdfriday/shortcode#readme",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.9",
@@ -45,7 +48,8 @@
     "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "tailwindcss": "^4.1.8"
   },
   "publishConfig": {
     "access": "public"

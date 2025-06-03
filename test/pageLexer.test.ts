@@ -1,4 +1,4 @@
-import { PageLexer, ShortcodeItem } from '../src/pageLexer';
+import { PageLexer, ShortcodeItem } from '../src/compiler/pageLexer';
 
 /**
  * PageLexer 单元测试

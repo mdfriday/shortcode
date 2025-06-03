@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爆款文案结构公式</title>
+    <style>
+        :root {
+            --primary-color: #e79cb0;
+            --secondary-color: #b8e2f2;
+            --bg-light: #f9f9f9;
+            --bg-highlight: #f9f0f3;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.4;
+            font-size: 16px;
+        }
+        
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: var(--bg-light);
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 400;
+            margin: 0;
+        }
+        
+        .header .brand {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .main-title {
+            background-color: var(--bg-highlight);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .main-title .number {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-right: 10px;
+        }
+        
+        .main-title h2 {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .formula {
+            background-color: var(--bg-light);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .formula-item {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            position: relative;
+            margin: 5px;
+        }
+        
+        .formula-item:after {
+            content: "+";
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .formula-item:last-child:after {
+            display: none;
+        }
+        
+        .formula-item span {
+            display: block;
+            border-bottom: 2px solid #000;
+            padding-bottom: 3px;
+            white-space: nowrap;
+        }
+        
+        .case-analysis {
+            padding: 10px 15px;
+        }
+        
+        .case-analysis h3 {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .point {
+            display: flex;
+        }
+        
+        .point-number {
+            font-size: 18px;
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #000;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .point-content {
+            flex: 1;
+        }
+        
+        .point-title {
+            font-size: 18px;
+            font-weight: bold;
+            background-color: var(--secondary-color);
+            padding: 3px 10px;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+        
+        .point-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .point-description {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .point-example {
+            font-size: 14px;
+            background-color: rgba(231, 156, 176, 0.1);
+            padding: 5px;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .footer {
+            font-size: 14px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            background-color: var(--bg-light);
+        }
+        
+        .footer p {
+            margin: 5px 0;
+        }
+        
+        .page-number {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 10px;
+            color: #888;
+        }
+        
+        /* Desktop Styles */
+        @media (min-width: 480px) {
+            body {
+                font-size: 18px;
+            }
+            
+            .header {
+                padding: 30px 30px 0;
+            }
+            
+            .header h1 {
+                font-size: 17px;
+            }
+            
+            .header .brand {
+                font-size: 17px;
+            }
+            
+            .main-title {
+                padding: 10px 30px;
+            }
+            
+            .main-title .number {
+                font-size: 28px;
+                margin-right: 15px;
+            }
+            
+            .main-title h2 {
+                font-size: 28px;
+            }
+            
+            .formula {
+                padding: 10px 30pxs;
+            }
+            
+            .formula-item {
+                font-size: 20px;
+                margin: 0 10px;
+            }
+            
+            .formula-item:after {
+                right: -15px;
+            }
+            
+            .case-analysis {
+                padding: 0 30px;
+            }
+            
+            .case-analysis h3 {
+                font-size: 22px;
+                margin-bottom: 10px;
+                margin-top: 0;
+            }
+            
+            .point-number {
+                font-size: 13px;
+                margin-right: 15px;
+                width: 30px;
+                height: 30px;
+            }
+            
+            .point-title {
+                font-size: 16px;
+                padding: 5px 15px;
+                margin-bottom: 10px;
+            }
+            
+            .point-text {
+                flex-direction: row;
+            }
+            
+            .point-description {
+                flex: 1;
+                margin-right: 20px;
+                font-size: 14px;
+            }
+            
+            .point-example {
+                flex: 1;
+                font-size: 14px;
+                background-color: transparent;
+                padding: 0;
+                border-left: none;
+            }
+            
+            .footer {
+                font-size: 13px;
+                padding: 1px 30px;
+                margin-top: 0;
+            }
+            
+            .page-number {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>[爆款文案结构公式]</h1>
+            <div class="brand">BUHEIXUEZHANG</div>
+        </div>
+
+        <div class="main-title">
+            <div class="number">05</div>
+            <h2>强化IP结构</h2>
+        </div>
+
+        <div class="formula">
+            <div class="formula-item"><span>痛点</span></div>
+            <div class="formula-item"><span>用户获得感</span></div>
+            <div class="formula-item"><span>IP信任感</span></div>
+            <div class="formula-item"><span>解决方案</span></div>
+        </div>
+
+        <div class="case-analysis">
+            <h3>案例解析</h3>
+            
+            <div class="point">
+                <div class="point-number">1</div>
+                <div class="point-content">
+                    <div class="point-title">痛点</div>
+                    <div class="point-text">
+                        <div class="point-description">
+                            将痛点放到视频开头的好处是，吸引来的都是精准粉丝；所以要思考你的目标群体的真正痛点！
+                        </div>
+                        <div class="point-example">
+                            如何免F读书还能每个月3000+<br>
+                            年轻人如何不靠打工才能够养活自己
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="point">
+                <div class="point-number">2</div>
+                <div class="point-content">
+                    <div class="point-title">获得感</div>
+                    <div class="point-text">
+                        <div class="point-description">
+                            你需要在2秒钟内告诉用户我将会为你提供巨大的价值，例如速成类知识
+                        </div>
+                        <div class="point-example">
+                            3步教大家快速学习新的赚0技能<br>
+                            5分钟教会你7种减脂做法，简单好吃
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="point">
+                <div class="point-number">3</div>
+                <div class="point-content">
+                    <div class="point-title">信任感</div>
+                    <div class="point-text">
+                        <div class="point-description">
+                            强化你将要陈述的内容的可信度，以及你本人的可信度/别人为什么信任你、同时也是为吸引用户看下去的钩子，递进式塑造期待感
+                        </div>
+                        <div class="point-example">
+                            我曾经帮助2000+学员解决什么问题<br>
+                            曾经获得官方的什么认证/奖项/技能
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="point">
+                <div class="point-number">4</div>
+                <div class="point-content">
+                    <div class="point-title">解决方案</div>
+                    <div class="point-text">
+                        <div class="point-description">
+                            价值是前面所有铺垫工作的最终结果，同时也是观众是否点赞关注的重要因素，如果故弄玄虚只会让用户厌烦
+                        </div>
+                        <div class="point-example">
+                            盘点真正有用的信息<br>
+                            展示卖点1/卖点2/卖点3
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>价值内容的来源/多去收集与行业相关的知识信息与行业内比较厉害的人的交流或者故事也能成为你知识的载体</p>
+            <p>注意/千万不要说教式的去表达，内容见好就收（控制时长/预留观众想象与思考的空间）；本身平台就是娱乐性质，知识类内容也要寓教于乐！</p>
+        </div>
+
+        <div class="page-number">— 3 —</div>
+    </div>
+</body>
+</html> 

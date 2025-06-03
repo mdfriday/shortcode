@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>麦肯锡笔记法</title>
+    <style>
+        .mdf-card {
+            margin: 0;
+            font-family: 'SimSun', 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+        }
+
+        .mdf-card .container {
+            width: 100%;
+        }
+
+        .mdf-card .chart {
+            border: 2px solid #000;
+            overflow: hidden;
+        }
+
+        .mdf-card .top-row {
+            background-color: #fff7b2;
+            padding: 15px;
+            border-bottom: 1px solid #000;
+        }
+
+        .mdf-card .step {
+            margin: 15px 0;
+        }
+
+        .mdf-card .step-number {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            line-height: 25px;
+            border-radius: 50%;
+            border: 1px solid #000;
+            text-align: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .mdf-card .step-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .mdf-card .step-description {
+            margin-left: 35px;
+        }
+
+        .mdf-card .bottom-row {
+            display: flex;
+            min-height: 400px;
+        }
+
+        .mdf-card .column {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mdf-card .column-pink {
+            background-color: #ffdddd;
+            border-right: 1px solid #000;
+        }
+
+        .mdf-card .column-blue {
+            background-color: #add8e6;
+            border-right: 1px solid #000;
+        }
+
+        .mdf-card .column-purple {
+            background-color: #b0b0e0;
+        }
+    </style>
+</head>
+<body>
+<div class="mdf-card">
+    <div class="container">
+        <div class="chart">
+            <div class="top-row">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <span class="step-title">：标题</span>
+                    <div class="step-description">写下标题与论点后，展开思考</div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">5</span>
+                    <span class="step-title">：结论</span>
+                    <div class="step-description">写下这一页思考的结论</div>
+                </div>
+            </div>
+            
+            <div class="bottom-row">
+                <div class="column column-pink">
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <span class="step-title">：现象</span>
+                        <div class="step-description">
+                            写下与论点相关的几项事实和观察，掌握真实状况
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="column column-blue">
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <span class="step-title">：解释</span>
+                        <div class="step-description">
+                            依据列举的事实，决定应该聚焦的问题，针对问题提出「5个为什么」深入思考，掌握问题的本质。
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="column column-purple">
+                    <div class="step">
+                        <span class="step-number">4</span>
+                        <span class="step-title">：行动</span>
+                        <div class="step-description">
+                            依据事实解释，现在应该做什么，决定「行动对策」。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
