@@ -1,6 +1,6 @@
-import { PageRenderer, PageRenderResult, PageRenderOptions } from './pageRenderer';
-import { ShortcodeRenderer } from './shortcodeRenderer';
-import { PageLexer } from './pageLexer';
+import { PageRenderer, PageRenderResult, PageRenderOptions } from '../src/pageRenderer';
+import { ShortcodeRenderer } from '../src/shortcodeRenderer';
+import { PageLexer } from '../src/pageLexer';
 
 /**
  * PageRenderer 单元测试

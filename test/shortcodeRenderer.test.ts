@@ -1,5 +1,5 @@
-import { ShortcodeRenderer } from './shortcodeRenderer';
-import { ShortcodeItem } from './pageLexer';
+import { ShortcodeRenderer } from '../src/shortcodeRenderer';
+import { ShortcodeItem } from '../src/pageLexer';
 
 /**
  * ShortcodeRenderer 单元测试
