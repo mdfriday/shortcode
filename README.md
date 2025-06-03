@@ -1,4 +1,4 @@
-# @mdfriday/shortcode-compiler
+# @mdfriday/shortcode
 
 A powerful shortcode compiler for markdown content, supporting function and template shortcodes, nested shortcodes, and frontmatter parsing.
 
